@@ -13,7 +13,7 @@ logger.setLevel(logging.DEBUG)
 class READ_HA:
 
 
-    def __init__(self, fin, min_winlen=0):
+    def __init__(self, fin, min_winlen=0, max_winlen=None):
 
 
         logger.info('Reading binary %s', fin)
@@ -44,7 +44,7 @@ class READ_HA:
         (ind_ok, ) = np.where((winlen %2 == 0) & (winlen > min_winlen))
         self.winlen = winlen[ind_ok]
         self.tdiff = np.array(tdiff)[ind_ok]
-        win_start = np.array(self.boundaries[:-1])[ind_ok]
+        win_start = np.array(self.boundaries[:-1])[ind_ok] + 4
 
         rawdata = data.astype(np.int16)
         rawdata -= 32768
@@ -53,12 +53,18 @@ class READ_HA:
         rawdata *= -1
 # Entry-inversion observed by Luca Giacomelli
         ndat = len(rawdata)
+        n_pulses = len(self.winlen)
         self.rawdata = np.append(rawdata[1::2], rawdata[::2]).reshape((2,  ndat//2)).T.ravel()
 
-        self.pulses   = []
+        if max_winlen is None:
+            max_winlen = np.max(self.winlen)
+
+        self.pulses = np.zeros((n_pulses, max_winlen))
+        pulse_len = np.minimum(self.winlen, max_winlen)
+        win_end = win_start + pulse_len
         logger.info('Reading pulses')
         for jwin, jpos in enumerate(win_start):
-            self.pulses.append(self.rawdata[jpos + 4: jpos + 4 + self.winlen[jwin]])
+            self.pulses[jwin][: pulse_len[jwin]] = self.rawdata[jpos : win_end[jwin]]
 
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
         logger.debug('%d', len(self.pulses))

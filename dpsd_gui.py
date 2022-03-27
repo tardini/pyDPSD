@@ -102,11 +102,10 @@ class DPSD_GUI:
             logger.error('Run DPSD first, then plot')
 
 
-
     def write_sf(self):
 
         if hasattr(self, 'dp'):
-            self.dp.sfwrite()
+            self.dp.sfwrite(exp='git')
         else:
             logger.error('Run DPSD first, then write Shotfile')
 
