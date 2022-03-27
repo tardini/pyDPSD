@@ -263,8 +263,8 @@ class DPSD:
         for spec in cnt_list:
             cnt, tedges = np.histogram(time[flg[spec]], bins=n_timebins, range=[self.time[0]-0.5*self.d_flt['TimeBin'], self.time[-1]+0.5*self.d_flt['TimeBin']])
             self.cnt[spec] = cnt.astype(np.float32)
-            logger.info(spec, np.sum(flg[spec]))
-        logger.info('LED', np.sum(flg['led']))
+            logger.info('%s %d', spec, np.sum(flg[spec]))
+        logger.info('%s %d', 'LED', np.sum(flg['led']))
 
 # Move to 1/ units
         for spec in self.cnt.keys():
