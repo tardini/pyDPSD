@@ -6,6 +6,7 @@ from matplotlib.patches import Rectangle
 import aug_sfutils as sf
 from aug_sfutils import sfhmod
 import dixm, read_ha
+from multiprocessing import Pool, cpu_count
 
 ww = sf.WW()
 
@@ -19,6 +20,32 @@ logger.setLevel(logging.INFO)
 sig1d = ['neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup']
 
 
+def BaselineCond(tuple_in):
+
+    pulse, pulse_len, maxpos, bl_start, max_diff, aver1, max_sg, max_lg = tuple_in
+    pulse_basestart = pulse_len - bl_start
+    blstart_h = bl_start//2
+    newpulse_len = 0
+    if pulse_basestart >= maxpos:
+        newpulse_len = pulse_len - blstart_h
+    else:
+        for j in range(maxpos, pulse_basestart):
+            aver2 = np.average(pulse[j: j + bl_start])
+            if np.abs(aver2 - aver1) < max_diff:
+                if max_lg > j + blstart_h:
+                    newpulse_len = max_lg
+                else:
+                    newpulse_len = j + blstart_h
+                break
+            if (j == pulse_basestart - 1) :
+                newpulse_len = pulse_len - blstart_h
+    short_int = np.trapz(pulse[maxpos: max_sg])
+    long_int  = np.trapz(pulse[maxpos: max_lg])
+    total_int = np.trapz(pulse[:newpulse_len])
+
+    return np.array([short_int, long_int, total_int])
+
+
 def PeakAlgo(nfront, ntail, nthres, pulse):
 
     pulse_width = nfront + ntail
@@ -28,23 +55,6 @@ def PeakAlgo(nfront, ntail, nthres, pulse):
     while jt < pulse_len-pulse_width:
         if (pulse[jt+nfront] - pulse[jt] > nthres) and \
            (pulse[jt+nfront] - pulse[jt+pulse_width] > nthres) :
-            pile_out += 1
-            jt += pulse_width
-        jt += 1
-    return pile_out
-
-
-def PeakAlgo_flt(nfront, ntail, nthres, pulse):
-
-    epsilon = 0.001
-    xthres = np.float32(nthres) + epsilon
-    pulse_width = nfront + ntail
-    pulse_len = len(pulse)
-    pile_out = 0
-    jt = 0
-    while jt < pulse_len-pulse_width:
-        if (pulse[jt+nfront] - pulse[jt] > xthres) and \
-           (pulse[jt+nfront] - pulse[jt+pulse_width] > xthres) :
             pile_out += 1
             jt += pulse_width
         jt += 1
@@ -83,28 +93,21 @@ class DPSD:
 
         nxCh = self.d_int['xChannels']
         nyCh = self.d_int['yChannels']
-        BLstart_h = self.d_int['BaselineStart']//2
 
         logger.info('Reading %s' %HAfile)
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
         ha = read_ha.READ_HA(HAfile, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
 
-        tind = np.where((ha.t_events >  self.d_flt['TBeg']) & (ha.t_events <= self.d_flt['TEnd']))[0]
-#        tind = np.append([tind[0]-1], tind)
-#        tind = np.append(tind, [tind[-1]+1])
-        jtbeg = tind[0]
-        jtend = tind[-1]
+        (tind, ) = np.where((ha.t_events >= self.d_flt['TBeg']) & (ha.t_events <= self.d_flt['TEnd']))
+
         time = ha.t_events[tind]
-        print('TBeg = TIMES[%d] = %8.4f' %(jtbeg, ha.t_events[jtbeg])) 
-        print('TEnd = TIMES[%d] = %8.4f' %(jtend, ha.t_events[jtend])) 
+        print('TBeg = %8.4f' %time[0]) 
+        print('TEnd = %8.4f' %time[-1]) 
         n_pulses = len(time)
-        n_timebins = int((time[-1]-time[0])/self.d_flt['TimeBin'])
+        n_timebins = int((time[-1] - time[0])/self.d_flt['TimeBin'])
         print('n_timebins = %d' %n_timebins)
         self.time = time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
 
-        self.ShortIntegral = np.zeros(n_pulses, dtype=np.float32)
-        self.LongIntegral  = np.zeros(n_pulses, dtype=np.float32)
-        self.TotalIntegral = np.zeros(n_pulses, dtype=np.float32)
         self.Xratio        = np.zeros(n_pulses, dtype=np.float32)
         self.Yratio        = np.zeros(n_pulses, dtype=np.float32)
 
@@ -164,25 +167,34 @@ class DPSD:
 
         logger.info('Baseline conditioned 2') 
         aver1 = np.average(pulses_flt[:, ind1], axis=1)
-        for jpul in range(n_pulses):
-            if jpul%100000 == 0:
-                logger.info(jpul)
-            pulse = pulses_flt[jpul]
 
-# Baseline conditioned 2
-            for j in range(maxpos[jpul], pulse_basestart[jpul]):
-                aver2 = np.average(pulse[j:j+self.d_int['BaselineStart']])
-                if np.abs(aver2 - aver1[jpul]) < self.d_flt['MaxDifference']:
-                    if max_LG[jpul] > j + BLstart_h:
-                        newpulse_len = max_LG[jpul]
-                    else:
-                        newpulse_len = j + BLstart_h
-                    break
-                if (j == pulse_basestart[jpul] - 1) :
-                    newpulse_len = int(pulse_len[jpul] - BLstart_h)
-            self.ShortIntegral[jpul] = np.trapz(pulse[maxpos[jpul]: max_SG[jpul]])
-            self.LongIntegral [jpul] = np.trapz(pulse[maxpos[jpul]: max_LG[jpul]])
-            self.TotalIntegral[jpul] = np.trapz(pulse[:newpulse_len])
+#        for jpul in range(n_pulses):
+#            if jpul%100000 == 0:
+#                logger.info(jpul)
+#            pulse = pulses_flt[jpul]
+#
+## Baseline conditioned 2
+#            for j in range(maxpos[jpul], pulse_basestart[jpul]):
+#                aver2 = np.average(pulse[j: j + self.d_int['BaselineStart']])
+#                if np.abs(aver2 - aver1[jpul]) < self.d_flt['MaxDifference']:
+#                    if max_LG[jpul] > j + BLstart_h:
+#                        newpulse_len = max_LG[jpul]
+#                    else:
+#                        newpulse_len = j + BLstart_h
+#                    break
+#                if (j == pulse_basestart[jpul] - 1) :
+#                    newpulse_len = int(pulse_len[jpul] - BLstart_h)
+#            self.TotalIntegral[jpul] = np.trapz(pulse[:newpulse_len])
+
+        timeout_pool = 120
+
+        pool = Pool(cpu_count())
+        out = pool.map_async(BaselineCond, [(pulses_flt[jpul], pulse_len[jpul], maxpos[jpul], self.d_int['BaselineStart'], self.d_flt['MaxDifference'], aver1[jpul], max_SG[jpul], max_LG[jpul]) for jpul in range(n_pulses)]).get(timeout_pool)
+
+        out = np.array(out)
+        self.ShortIntegral = out[: , 0]
+        self.LongIntegral  = out[: , 1]
+        self.TotalIntegral = out[: , 2]
 
         mark = np.float32(nxCh)/np.float32(self.d_int['Marker'])
         ind3 = np.where(self.LongIntegral > 0)[0]

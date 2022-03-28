@@ -20,20 +20,18 @@ class READ_HA:
         data = np.fromfile(fin, dtype=np.uint16)
         tdiff = []
         self.boundaries = []
-        skipped_odd = []
-        (ind, ) = np.where((data >= 0) & (data < 3))
+
+        data1 = data + 1
+        (self.boundaries, ) = np.where( (data[:-3] >= 0) & (data[:-3] < 3) & \
+            (data[2:-1] < 3) & (data[2:-1] >= 0) & (data1[1:-2] == data[3:]) )
         logger.info('Getting t_diff and win_len')
 
-        for jpos in ind:
-            if (data[jpos+2] == data[jpos]) and (data[jpos+1] == data[jpos+3]-1):
-                self.boundaries.append(jpos)
-                if data[jpos] == 0:
-                    tdiff.append(data[jpos+3])
-                elif data[jpos] == 1:
-                    tdiff.append(32768 + data[jpos+3])
-                elif data[jpos] == 2:
-                    tdiff.append(65536 + data[jpos+3])
-        self.boundaries.append(len(data)) # Retain final pulse too, unlike *.bin
+        d32 = data[self.boundaries]*32768
+
+        for j, jpos in enumerate(self.boundaries):
+            tdiff.append(d32[j] + data[jpos+3])
+
+        self.boundaries = np.append(self.boundaries, len(data)) # Retain final pulse too, unlike *.bin
         winlen = np.diff(self.boundaries) - 4
 
         (ind_odd, ) = np.where(winlen %2 == 1)
