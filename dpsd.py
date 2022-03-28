@@ -7,7 +7,6 @@ from matplotlib.patches import Rectangle
 import aug_sfutils as sf
 from aug_sfutils import sfhmod
 import dixm, read_ha
-from multiprocessing import Pool, cpu_count
 
 ww = sf.WW()
 
@@ -28,27 +27,37 @@ def slice_trapz(a, bnd_l, bnd_r):
     return b
 
 
-def BaselineCond(tuple_in):
+@nb.njit
+def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, aver1, max_lg):
 
-    pulse, pulse_len, maxpos, bl_start, max_diff, aver1, max_lg = tuple_in
+    n_pulses = maxpos.shape[0]
     pulse_basestart = pulse_len - bl_start
     blstart_h = bl_start//2
-    newpulse_len = 0
-    if pulse_basestart >= maxpos:
-        newpulse_len = pulse_len - blstart_h
-    else:
-        for j in range(maxpos, pulse_basestart):
-            aver2 = np.average(pulse[j: j + bl_start])
-            if np.abs(aver2 - aver1) < max_diff:
-                if max_lg > j + blstart_h:
-                    newpulse_len = max_lg
-                else:
-                    newpulse_len = j + blstart_h
-                break
-            if (j == pulse_basestart - 1) :
-                newpulse_len = pulse_len - blstart_h
+    totalintegral = np.zeros(n_pulses, dtype=np.float32)
 
-    return np.trapz(pulse[:newpulse_len])
+    for jpul in range(n_pulses):
+        newpulse_len = 0
+        pulse = pulses[jpul]
+        if pulse_basestart[jpul] >= maxpos[jpul]:
+            newpulse_len = pulse_len[jpul] - blstart_h
+        else:
+            for j in range(maxpos[jpul], pulse_basestart[jpul]):
+                aver2 = 0.
+                for i in range(j, j + bl_start):
+                    aver2 += pulse[i]
+                aver2 /= float(bl_start)
+                if np.abs(aver2 - aver1[jpul]) < max_diff:
+                    if max_lg[jpul] > j + blstart_h:
+                        newpulse_len = max_lg[jpul]
+                    else:
+                        newpulse_len = j + blstart_h
+                    break
+                if (j == pulse_basestart[jpul] - 1) :
+                    newpulse_len = pulse_len[jpul] - blstart_h
+
+        totalintegral[jpul] = np.trapz(pulse[:newpulse_len])
+
+    return totalintegral
 
 
 @nb.njit
@@ -194,12 +203,7 @@ class DPSD:
         logger.info('Baseline conditioned 2') 
         aver1 = np.average(pulses_flt[:, ind1], axis=1)
 
-        timeout_pool = 120
-
-        pool = Pool(cpu_count())
-        out = pool.map_async(BaselineCond, [(pulses_flt[jpul], pulse_len[jpul], maxpos[jpul], self.d_int['BaselineStart'], self.d_flt['MaxDifference'], aver1[jpul], max_LG[jpul]) for jpul in range(n_pulses)]).get(timeout_pool)
-
-        self.TotalIntegral = np.array(out)
+        self.TotalIntegral = BaselineCond2(self.d_int['BaselineStart'], self.d_flt['MaxDifference'], pulses_flt, pulse_len, maxpos, aver1, max_LG)
         self.ShortIntegral = slice_trapz(pulses_flt, maxpos, max_SG)
         self.LongIntegral  = slice_trapz(pulses_flt, maxpos, max_LG)
         mark = np.float32(nxCh)/np.float32(self.d_int['Marker'])

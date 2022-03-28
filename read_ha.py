@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-
+import numba as nb
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 logger = logging.getLogger('read_HA')
@@ -8,6 +8,16 @@ hnd = logging.StreamHandler()
 hnd.setFormatter(fmt)
 logger.addHandler(hnd)
 logger.setLevel(logging.DEBUG)
+
+
+@nb.njit
+def raw2pulse(max_winlen, win_start, pulse_len, rawdata):
+
+    win_end = win_start + pulse_len
+    pulses = np.zeros((win_start.shape[0], max_winlen))
+    for jwin, jpos in enumerate(win_start):
+        pulses[jwin][: pulse_len[jwin]] = rawdata[jpos : win_end[jwin]]
+    return pulses
 
 
 class READ_HA:
@@ -51,12 +61,10 @@ class READ_HA:
         if max_winlen is None:
             max_winlen = np.max(self.winlen)
 
-        self.pulses = np.zeros((n_pulses, max_winlen))
-        pulse_len = np.minimum(self.winlen, max_winlen)
-        win_end = win_start + pulse_len
         logger.info('Reading pulses')
-        for jwin, jpos in enumerate(win_start):
-            self.pulses[jwin][: pulse_len[jwin]] = self.rawdata[jpos : win_end[jwin]]
+        pulse_len = np.minimum(self.winlen, max_winlen)
+
+        self.pulses = raw2pulse(max_winlen, win_start, pulse_len, self.rawdata)
 
         self.t_events = 1e-8*(np.cumsum(self.tdiff, dtype=np.float32))
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
