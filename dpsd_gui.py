@@ -1,4 +1,5 @@
 import os, sys, logging
+import numba as nb
 
 try:
     import Tkinter as tk

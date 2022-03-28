@@ -1,6 +1,7 @@
 import sys, os, logging
 
 import numpy as np
+import numba as nb
 import matplotlib.pylab as plt
 from matplotlib.patches import Rectangle
 import aug_sfutils as sf
@@ -15,14 +16,21 @@ logger = logging.getLogger('DPSD')
 hnd = logging.StreamHandler()
 hnd.setFormatter(fmt)
 logger.addHandler(hnd)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 sig1d = ['neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup']
+
+@nb.njit
+def slice_trapz(a, bnd_l, bnd_r):
+    b = np.zeros(a.shape[0])
+    for j in range(a.shape[0]):
+        b[j] = np.trapz(a[j, bnd_l[j]: bnd_r[j]])
+    return b
 
 
 def BaselineCond(tuple_in):
 
-    pulse, pulse_len, maxpos, bl_start, max_diff, aver1, max_sg, max_lg = tuple_in
+    pulse, pulse_len, maxpos, bl_start, max_diff, aver1, max_lg = tuple_in
     pulse_basestart = pulse_len - bl_start
     blstart_h = bl_start//2
     newpulse_len = 0
@@ -39,27 +47,51 @@ def BaselineCond(tuple_in):
                 break
             if (j == pulse_basestart - 1) :
                 newpulse_len = pulse_len - blstart_h
-    short_int = np.trapz(pulse[maxpos: max_sg])
-    long_int  = np.trapz(pulse[maxpos: max_lg])
-    total_int = np.trapz(pulse[:newpulse_len])
 
-    return np.array([short_int, long_int, total_int])
+    return np.trapz(pulse[:newpulse_len])
 
 
-def PeakAlgo(nfront, ntail, nthres, pulse):
+@nb.njit
+def Baseline(baseend, ind1, pulse_len, pulses):
 
-    pulse_width = nfront + ntail
-    pulse_len = len(pulse)
-    pile_out = 0
-    jt = 0
-    pulse_front = pulse[nfront : -ntail] - nthres
-    pulse_max = np.maximum(pulse[:-pulse_width], pulse[pulse_width:])
-    while jt < pulse_len-pulse_width:
-        if pulse_front[jt] > pulse_max[jt]:
-            pile_out += 1
-            jt += pulse_width
-        jt += 1
-    return pile_out
+    n_pulses = pulses.shape[0]
+    pulse_baseend = pulse_len - baseend
+    baseline = np.zeros(n_pulses, dtype=np.float32)
+    for jpul in range(n_pulses):
+# Baseline subtraction
+        ind2 = np.arange(pulse_baseend[jpul], pulse_len[jpul], dtype=np.int32)
+        ind_bl = np.unique(np.append(ind1, ind2))
+        for j in ind_bl:
+            baseline[jpul] += pulses[jpul, j]
+        baseline[jpul] /= float(ind_bl.shape[0])
+    return baseline
+
+@nb.njit
+def PileUpDet(nfront, ntail, nthres, front_led, tail_led, flags, pulses):
+
+    n_pulses, pulse_len = pulses.shape
+    flg_peaks = np.zeros(n_pulses, dtype=np.int32)
+
+    for jpul, flg in enumerate(flags):
+        pulse = pulses[jpul]
+        if flg:
+            pulse_width = front_led + tail_led
+            pulse_front = pulse[front_led : -tail_led] - nthres
+        else:
+            pulse_width = nfront + ntail
+            pulse_front = pulse[nfront : -ntail] - nthres
+
+        pulse_max = np.maximum(pulse[:-pulse_width], pulse[pulse_width:])
+        flg_peaks[jpul] = 0
+        jt = 0
+        while jt < pulse_len-pulse_width:
+            if pulse_front[jt] > pulse_max[jt]:
+                flg_peaks[jpul] += 1
+                jt += pulse_width
+            jt += 1
+        flg_peaks[jpul] 
+
+    return flg_peaks
 
 
 class DPSD:
@@ -110,8 +142,8 @@ class DPSD:
         self.time = time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
         self.time_led = time[0] + self.d_flt['LEDdt']*(0.5 + np.arange(n_led))
 
-        self.Xratio        = np.zeros(n_pulses, dtype=np.float32)
-        self.Yratio        = np.zeros(n_pulses, dtype=np.float32)
+        self.Xratio = np.zeros(n_pulses, dtype=np.float32)
+        self.Yratio = np.zeros(n_pulses, dtype=np.float32)
 
         winlen = ha.winlen[tind]
         pulses = ha.pulses[tind]
@@ -135,33 +167,22 @@ class DPSD:
         logger.info('Starting time loop')
 
         print('# pulses: %6d' % n_pulses)
-        ind1 = np.arange(self.d_int['BaselineStart'])
+        ind1 = np.arange(self.d_int['BaselineStart'], dtype=np.int32)
         maxpos = np.argmax(pulses, axis=1)
         pulse_max = np.max(pulses, axis=1)
 
         max_LG = np.minimum(maxpos + self.d_int['LongGate' ], winlen)
         max_SG = np.minimum(maxpos + self.d_int['ShortGate'], winlen)
-        print(maxpos.shape)
-        print(max_LG.shape)
         tof_win_len = self.d_int['ToFWindowLength']
         sat_high = float(dic_in['SaturationHigh'])
         sat_low  = float(dic_in['SaturationLow'])
         pulse_len = np.minimum(winlen, tof_win_len)
-        pulse_baseend   = pulse_len - self.d_int['BaselineEnd']
+        pulse_baseend = pulse_len - self.d_int['BaselineEnd']
         
         logger.info('Baseline subtraction')
-        (ind_var, ) = np.where(pulse_len != tof_win_len)
-        ind2 = np.arange(tof_win_len - self.d_int['BaselineEnd'], tof_win_len)
-        ind_avg = np.unique(np.append(ind1, ind2))
-        baseline = np.average(pulses[:, ind_avg], axis=1)
-
-        for jpul in ind_var:
-# Baseline subtraction
-            ind2 = np.arange(pulse_baseend[jpul], pulse_len[jpul])
-            ind_bl = np.unique(np.append(ind1, ind2))
-            baseline[jpul] = np.average(pulses[jpul, ind_bl])
-
-        pulses_flt = pulses.astype(np.float32) - baseline[:, None]
+        pulses_flt = pulses.astype(np.float32)
+        baseline = Baseline(self.d_int['BaselineEnd'], ind1, pulse_len, pulses_flt)
+        pulses_flt -= baseline[:, None]
 
 # Saturation detection
         logger.info('Saturation detection')
@@ -176,13 +197,11 @@ class DPSD:
         timeout_pool = 120
 
         pool = Pool(cpu_count())
-        out = pool.map_async(BaselineCond, [(pulses_flt[jpul], pulse_len[jpul], maxpos[jpul], self.d_int['BaselineStart'], self.d_flt['MaxDifference'], aver1[jpul], max_SG[jpul], max_LG[jpul]) for jpul in range(n_pulses)]).get(timeout_pool)
+        out = pool.map_async(BaselineCond, [(pulses_flt[jpul], pulse_len[jpul], maxpos[jpul], self.d_int['BaselineStart'], self.d_flt['MaxDifference'], aver1[jpul], max_LG[jpul]) for jpul in range(n_pulses)]).get(timeout_pool)
 
-        out = np.array(out)
-        self.ShortIntegral = out[: , 0]
-        self.LongIntegral  = out[: , 1]
-        self.TotalIntegral = out[: , 2]
-
+        self.TotalIntegral = np.array(out)
+        self.ShortIntegral = slice_trapz(pulses_flt, maxpos, max_SG)
+        self.LongIntegral  = slice_trapz(pulses_flt, maxpos, max_LG)
         mark = np.float32(nxCh)/np.float32(self.d_int['Marker'])
         ind3 = np.where(self.LongIntegral > 0)[0]
 
@@ -198,17 +217,9 @@ class DPSD:
             (self.Yratio > float(self.d_int['LEDymin'])) & \
             (self.Yratio < float(self.d_int['LEDymax'])) 
 
-# Pile-up detection, use integer pulse (baseline just offsets whole pulse)
-
         logger.info('Pile-up detection')
-        for jpul in range(n_pulses):
 
-            if flg['led'][jpul]: #LED
-                self.flg_peaks[jpul] = PeakAlgo( \
-                    self.d_int['LEDFront'], self.d_int['LEDTail'], self.d_int['Threshold'], pulses[jpul])
-            else:
-                self.flg_peaks[jpul] = PeakAlgo( \
-                    self.d_int['Front'], self.d_int['Tail'], self.d_int['Threshold'], pulses[jpul])
+        self.flg_peaks = PileUpDet(self.d_int['Front'], self.d_int['Tail'], self.d_int['Threshold'], self.d_int['LEDFront'], self.d_int['LEDTail'], flg['led'], pulses)
 
 # LED correction
 
