@@ -56,10 +56,14 @@ class DPSD_GUI:
 
         self.dpsd_d = {}
 
+        cbdic = {'GraphPulse':False, 'GraphTime':False, 'GraphWin':False, 'SubtBaseline':True, 'LEDcorrection':True}
+
         jrow = 0
         entframe1 = ttk.Frame(entframe)
         entframe1.pack(side=tk.LEFT, padx='10 2')
         for key, val in setup_en_d.items():
+            if key in cbdic.keys() or key == 'Slice':
+                continue
             if jrow == 17:
                 entframe1 = ttk.Frame(entframe)
                 entframe1.pack(side=tk.LEFT, padx='10 2', anchor=tk.N)
@@ -77,8 +81,7 @@ class DPSD_GUI:
 
 # Checkbutton
 
-        cbdic = {'GraphPulse':False, 'GraphTime':False, 'GraphWin':False, 'SubtBaseline':True, 'LEDcorrection':True}
-        for key in ('GraphPulse', 'GraphTime', 'GraphWin', 'SubtBaseline', 'LEDcorrection'):
+        for key in ('SubtBaseline', 'LEDcorrection'):
             self.dpsd_d[key] = tk.BooleanVar()
             self.dpsd_d[key].set(cbdic[key])
             ttk.Checkbutton(cbframe, variable=self.dpsd_d[key], text=key).pack(side=tk.LEFT, padx='10 2', pady='10 2')

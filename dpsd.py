@@ -52,9 +52,10 @@ def PeakAlgo(nfront, ntail, nthres, pulse):
     pulse_len = len(pulse)
     pile_out = 0
     jt = 0
+    pulse_front = pulse[nfront : -ntail] - nthres
+    pulse_max = np.maximum(pulse[:-pulse_width], pulse[pulse_width:])
     while jt < pulse_len-pulse_width:
-        if (pulse[jt+nfront] - pulse[jt] > nthres) and \
-           (pulse[jt+nfront] - pulse[jt+pulse_width] > nthres) :
+        if pulse_front[jt] > pulse_max[jt]:
             pile_out += 1
             jt += pulse_width
         jt += 1
@@ -94,7 +95,6 @@ class DPSD:
         nxCh = self.d_int['xChannels']
         nyCh = self.d_int['yChannels']
 
-        logger.info('Reading %s' %HAfile)
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
         ha = read_ha.READ_HA(HAfile, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
 
@@ -105,8 +105,10 @@ class DPSD:
         print('TEnd = %8.4f' %time[-1]) 
         n_pulses = len(time)
         n_timebins = int((time[-1] - time[0])/self.d_flt['TimeBin'])
+        n_led = int((time[-1] - time[0])/self.d_flt['LEDdt'])
         print('n_timebins = %d' %n_timebins)
         self.time = time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
+        self.time_led = time[0] + self.d_flt['LEDdt']*(0.5 + np.arange(n_led))
 
         self.Xratio        = np.zeros(n_pulses, dtype=np.float32)
         self.Yratio        = np.zeros(n_pulses, dtype=np.float32)
@@ -119,7 +121,7 @@ class DPSD:
         flg_sat   = np.zeros(n_pulses)
         self.flg_peaks = np.zeros(n_pulses)
 
-        self.pmgain = np.zeros(n_timebins, dtype=np.float32)
+        self.pmgain = np.zeros(n_led, dtype=np.float32)
 
         LEDsumm = 0
         LEDaver = 0
@@ -141,16 +143,19 @@ class DPSD:
         max_SG = np.minimum(maxpos + self.d_int['ShortGate'], winlen)
         print(maxpos.shape)
         print(max_LG.shape)
+        tof_win_len = self.d_int['ToFWindowLength']
         sat_high = float(dic_in['SaturationHigh'])
         sat_low  = float(dic_in['SaturationLow'])
-        pulse_len = np.minimum(winlen, self.d_int['ToFWindowLength'])
-        pulse_basestart = pulse_len - self.d_int['BaselineStart']
+        pulse_len = np.minimum(winlen, tof_win_len)
         pulse_baseend   = pulse_len - self.d_int['BaselineEnd']
         
         logger.info('Baseline subtraction')
-        baseline = np.zeros(n_pulses, dtype=np.float32)
-#        ind_bl = []
-        for jpul in range(n_pulses):
+        (ind_var, ) = np.where(pulse_len != tof_win_len)
+        ind2 = np.arange(tof_win_len - self.d_int['BaselineEnd'], tof_win_len)
+        ind_avg = np.unique(np.append(ind1, ind2))
+        baseline = np.average(pulses[:, ind_avg], axis=1)
+
+        for jpul in ind_var:
 # Baseline subtraction
             ind2 = np.arange(pulse_baseend[jpul], pulse_len[jpul])
             ind_bl = np.unique(np.append(ind1, ind2))
@@ -167,24 +172,6 @@ class DPSD:
 
         logger.info('Baseline conditioned 2') 
         aver1 = np.average(pulses_flt[:, ind1], axis=1)
-
-#        for jpul in range(n_pulses):
-#            if jpul%100000 == 0:
-#                logger.info(jpul)
-#            pulse = pulses_flt[jpul]
-#
-## Baseline conditioned 2
-#            for j in range(maxpos[jpul], pulse_basestart[jpul]):
-#                aver2 = np.average(pulse[j: j + self.d_int['BaselineStart']])
-#                if np.abs(aver2 - aver1[jpul]) < self.d_flt['MaxDifference']:
-#                    if max_LG[jpul] > j + BLstart_h:
-#                        newpulse_len = max_LG[jpul]
-#                    else:
-#                        newpulse_len = j + BLstart_h
-#                    break
-#                if (j == pulse_basestart[jpul] - 1) :
-#                    newpulse_len = int(pulse_len[jpul] - BLstart_h)
-#            self.TotalIntegral[jpul] = np.trapz(pulse[:newpulse_len])
 
         timeout_pool = 120
 
@@ -235,15 +222,14 @@ class DPSD:
         LEDsumm = 0
         LEDamount = 0
         LEDcoeff = 0
+        tled = ((time - time[0])/self.d_flt['LEDdt']).astype(np.int32) - 1
         for jpul in range(n_pulses):
-
-            jtime = int((time[jpul] - time[0])/self.d_flt['LEDdt']) - 1
+            jtime = tled[jpul]
             if (jtime > jtime_old):
-                if self.cnt['led'][jtime] > 0:
-                    if LEDamount > 0:
-                        self.pmgain[jtime] = mark*np.float32(LEDsumm)/np.float32(LEDamount)
-                        if LEDsumm > 0:
-                            LEDcoeff = np.float32(self.d_int['LEDreference'])/self.pmgain[jtime]
+                if LEDamount > 0:
+                    self.pmgain[jtime] = mark*np.float32(LEDsumm)/np.float32(LEDamount)
+                    if LEDsumm > 0:
+                        LEDcoeff = np.float32(self.d_int['LEDreference'])/self.pmgain[jtime]
                 self.TotalIntegral[jtmark: jpul] *= LEDcoeff
                 self.Xratio[jtmark: jpul] *= LEDcoeff
                 jtmark = jpul
@@ -350,7 +336,7 @@ class DPSD:
         plt.legend()
 
         plt.figure('PM gain')
-        plt.plot(self.time, self.pmgain, 'r-')
+        plt.plot(self.time_led, self.pmgain/float(self.d_int['LEDreference']), 'r-')
         plt.show()
 
 

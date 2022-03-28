@@ -18,20 +18,15 @@ class READ_HA:
 
         logger.info('Reading binary %s', fin)
         data = np.fromfile(fin, dtype=np.uint16)
-        tdiff = []
-        self.boundaries = []
 
-        data1 = data + 1
-        (self.boundaries, ) = np.where( (data[:-3] >= 0) & (data[:-3] < 3) & \
-            (data[2:-1] < 3) & (data[2:-1] >= 0) & (data1[1:-2] == data[3:]) )
         logger.info('Getting t_diff and win_len')
+        data1 = data + 1
+        (boundaries, ) = np.where( (data[:-3] >= 0) & (data[:-3] < 3) & \
+            (data[2:-1] < 3) & (data[2:-1] >= 0) & (data1[1:-2] == data[3:]) )
 
-        d32 = data[self.boundaries]*32768
+        tdiff = data[boundaries + 3] + data[boundaries]*32768
 
-        for j, jpos in enumerate(self.boundaries):
-            tdiff.append(d32[j] + data[jpos+3])
-
-        self.boundaries = np.append(self.boundaries, len(data)) # Retain final pulse too, unlike *.bin
+        self.boundaries = np.append(boundaries, len(data)) # Retain final pulse too, unlike *.bin
         winlen = np.diff(self.boundaries) - 4
 
         (ind_odd, ) = np.where(winlen %2 == 1)
@@ -41,18 +36,17 @@ class READ_HA:
 
         (ind_ok, ) = np.where((winlen %2 == 0) & (winlen > min_winlen))
         self.winlen = winlen[ind_ok]
-        self.tdiff = np.array(tdiff)[ind_ok]
-        win_start = np.array(self.boundaries[:-1])[ind_ok] + 4
+        self.tdiff = tdiff[ind_ok]
+        win_start = boundaries[ind_ok] + 4
 
-        rawdata = data.astype(np.int16)
-        rawdata -= 32768
-        (ind_neg, ) = np.where(rawdata > 8192)
-        rawdata[ind_neg] -= 16384
-        rawdata *= -1
+        data = data.astype(np.int16)
+        data -= 32768
+        (ind_neg, ) = np.where(data > 8192)
+        data[ind_neg] -= 16384
+        data *= -1
 # Entry-inversion observed by Luca Giacomelli
-        ndat = len(rawdata)
         n_pulses = len(self.winlen)
-        self.rawdata = np.append(rawdata[1::2], rawdata[::2]).reshape((2,  ndat//2)).T.ravel()
+        self.rawdata = np.stack((data[1::2], data[::2])).T.ravel()
 
         if max_winlen is None:
             max_winlen = np.max(self.winlen)
@@ -64,9 +58,9 @@ class READ_HA:
         for jwin, jpos in enumerate(win_start):
             self.pulses[jwin][: pulse_len[jwin]] = self.rawdata[jpos : win_end[jwin]]
 
+        self.t_events = 1e-8*(np.cumsum(self.tdiff, dtype=np.float32))
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
         logger.debug('%d', len(self.pulses))
-        self.t_events = 1e-8*(np.cumsum(self.tdiff, dtype=np.float32))
 
 
 if __name__ == '__main__':
