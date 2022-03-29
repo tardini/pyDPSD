@@ -7,7 +7,7 @@ logger = logging.getLogger('read_HA')
 hnd = logging.StreamHandler()
 hnd.setFormatter(fmt)
 logger.addHandler(hnd)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 @nb.njit

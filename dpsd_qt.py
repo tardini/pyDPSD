@@ -6,13 +6,17 @@ __date__    = '29.03.2022'
 
 import os, sys, logging
 
-from PyQt5 import uic
-from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QRadioButton, QCheckBox, QButtonGroup
-from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtCore import Qt, QRect, QSize
+try:
+    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox
+    from PyQt5.QtGui import QPixmap, QIcon
+    from PyQt5.QtCore import Qt, QRect, QSize
+    qt5 = True
+except:
+    from PyQt4.QtCore import Qt, QRect, QSize
+    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox
+    qt5 = False
 
 import numpy as np
-import matplotlib.pylab as plt
 import dixm, dpsd, plot_dpsd
 try:
     import aug_sfutils as sf
@@ -25,7 +29,7 @@ hnd = logging.StreamHandler()
 hnd.setFormatter(fmt)
 logger = logging.getLogger('DPSD_GUI')
 logger.addHandler(hnd)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 frc = '#b0d0b0'  # Frame, Notebook, Checkbutton
 tbc = '#eaeaea'  # Toolbar, Button
@@ -40,7 +44,11 @@ class DPSD(QMainWindow):
 
     def __init__(self):
 
-        super().__init__()
+        if qt5:
+            super().__init__()
+        else:
+            super(QMainWindow, self).__init__()
+
         self.setWindowTitle('DPSD')
 
         xwin  = 640
@@ -90,7 +98,7 @@ class DPSD(QMainWindow):
         dum_lbl  = QLabel(600*' ')
         fmap = {'play': self.run, 'plot': self.plot, \
             'save': self.write_sf, 'exit': sys.exit}
-        for jpos, lbl in enumerate(fmap.keys()):
+        for jpos, lbl in enumerate(['play', 'exit', 'plot', 'save']):
             but = QPushButton()
             but.setIcon(QIcon('%s/%s.gif' %(dpsd_dir, lbl)))
             but.setIconSize(QSize(ybar, ybar))
@@ -159,6 +167,7 @@ class DPSD(QMainWindow):
             elif isinstance(val, QCheckBox):
                 dpsd_dic[key] = val.isChecked()
         self.dp = dpsd.DPSD(dpsd_dic)
+        logger.info('Done calculation')
 
 
     def plot(self):
@@ -173,10 +182,10 @@ class DPSD(QMainWindow):
         fig3 = plot_dpsd.fig_cnt(self.dp)
         fig4 = plot_dpsd.fig_pmg(self.dp)
 
-        self.wid.addPlot('PH-PS separation', fig1)
-        self.wid.addPlot('PHA spectrum'    , fig2)
-        self.wid.addPlot('Count rates'     , fig3)
-        self.wid.addPlot('PM gain'         , fig4)
+        self.wid.addPlot('PH-PS separation'     , fig1)
+        self.wid.addPlot('Pulse Height spectrum', fig2)
+        self.wid.addPlot('Count rates'          , fig3)
+        self.wid.addPlot('PM gain'              , fig4)
 
         self.wid.show()
  
@@ -194,4 +203,4 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     main = DPSD()
-    app.exec()
+    app.exec_()

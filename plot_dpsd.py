@@ -1,13 +1,21 @@
 import sys
-import matplotlib.pylab as plt
 import matplotlib
 import numpy as np
 
-from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from PyQt5.QtCore import QRect
-matplotlib.rcParams['backend'] = 'Qt5Agg'
+try:
+    from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout
+    from PyQt5.QtCore import QRect
+    matplotlib.use('Qt5Agg')
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+except:
+    from PyQt4.QtGui import QWidget, QTabWidget, QVBoxLayout
+    from PyQt4.QtCore import QRect
+    matplotlib.use('Qt4Agg')
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+
+import matplotlib.pylab as plt
 from matplotlib.patches import Rectangle
 
 fsize   = 8
@@ -16,13 +24,18 @@ lblsize = 10
 
 sig1d = ['neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup']
 
+
 class plotWindow(QWidget):
 
 
     def __init__(self):
 
-        super().__init__()
-        self.setGeometry(QRect(10, 10, 1200, 710))
+        print(matplotlib.rcParams['backend'])
+        if matplotlib.rcParams['backend'] == 'Qt5Agg':
+            super().__init__()
+        else:
+            super(QWidget, self).__init__()
+        self.setGeometry(QRect(80, 30, 1200, 710))
         self.tabs = QTabWidget(self)
 
         self.setWindowTitle('Time traces')
@@ -53,8 +66,9 @@ def fig_pha(dpsd, color='#c00000'):
     hpha, xedges, yedges = np.histogram2d(dpsd.Xratio, dpsd.Yratio, bins=nbins, range=ranges)
     hpha = np.rot90(hpha)
     hpha = np.flipud(hpha)
-    Hmasked = np.ma.masked_where(hpha == 0, hpha) # Mask pixels with a value of zer#
-
+    Hmasked = np.ma.masked_where(hpha == 0, hpha) # Mask pixels with a value of zero
+    plt.xlim([0, nbins[0]])
+#    plt.ylim([0, nbins[1]])
     plt.pcolormesh(xedges, yedges, np.log10(Hmasked))
     cbar = plt.colorbar()
 
@@ -86,7 +100,8 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
     ymax = 0
     for spec in ['neut1', 'gamma1', 'led']:
         plt.plot(dpsd.phs[spec], label=spec)
-        ymax = max(ymax, np.max(dpsd.phs[spec][1:]))
+        ymax = max(ymax, np.max(dpsd.phs[spec]))
+    plt.xlim([0, dpsd.d_int['xChannels']])
     plt.ylim([0, ymax])
     plt.legend()
 
@@ -100,8 +115,12 @@ def fig_cnt(dpsd, color='#c00000', ymax=2, titles=None):
     fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
     fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
+    ymax = 0
     for spec in sig1d:
         plt.plot(dpsd.time, dpsd.cnt[spec], label=spec)
+        ymax = max(ymax, np.max(dpsd.cnt[spec]))
+    plt.xlim([dpsd.time[0], dpsd.time[-1]])
+    plt.ylim([0, ymax])
     plt.legend()
 
     return fig
@@ -115,5 +134,7 @@ def fig_pmg(dpsd):
     fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     plt.plot(dpsd.time_led, dpsd.pmgain/float(dpsd.d_int['LEDreference']), 'r-')
+    plt.xlim([dpsd.time[0], dpsd.time[-1]])
+    plt.ylim([0, 1.5])
 
     return fig
