@@ -8,6 +8,10 @@ except:
     import tkinter as tk
     from tkinter import ttk
 import dixm, dpsd
+try:
+    import aug_sfutils as sf
+except:
+    pass
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 logger = logging.getLogger('DPSD_GUI')
@@ -30,7 +34,8 @@ class DPSD_GUI:
             import ttk_style
         else:
             topframe = tk.Toplevel()
- 
+
+        topframe.title('DPSD')
         setup_en_d = dixm.DIX().xml2dict('/afs/ipp/home/g/git/DPSD/xml/default.xml')
 
         toolframe = ttk.Frame(topframe)
@@ -50,8 +55,10 @@ class DPSD_GUI:
         btexit = ttk.Button(toolframe, command=sys.exit, image=exitfig)
         btplot = ttk.Button(toolframe, command=self.plot, image=plotfig)
         btsave = ttk.Button(toolframe, command=self.write_sf, image=savefig)
-        for but in btrun, btexit, btplot, btsave:
+        for but in btrun, btexit, btplot:
             but.pack(side=tk.LEFT)
+        if 'aug_sfutils' in sys.modules:
+            btsave.pack(side=tk.LEFT)
 
 # Entries
 

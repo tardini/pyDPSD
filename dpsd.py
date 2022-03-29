@@ -4,11 +4,8 @@ import numpy as np
 import numba as nb
 import matplotlib.pylab as plt
 from matplotlib.patches import Rectangle
-import aug_sfutils as sf
-from aug_sfutils import sfhmod
 import dixm, read_ha
 
-ww = sf.WW()
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 logger = logging.getLogger('DPSD')
@@ -23,7 +20,10 @@ sig1d = ['neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup']
 def slice_trapz(a, bnd_l, bnd_r):
     b = np.zeros(a.shape[0])
     for j in range(a.shape[0]):
-        b[j] = np.trapz(a[j, bnd_l[j]: bnd_r[j]])
+        for i in range(bnd_l[j]+1, bnd_r[j]-1):
+            b[j] += a[j, i]
+        b[j] += 0.5*(a[j, bnd_l[j]] + a[j, bnd_r[j]-1])
+#       b = np.trapz(a[j, bnd_l[j]: bnd_r[j]])
     return b
 
 
@@ -55,7 +55,10 @@ def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, aver1, max_lg):
                 if (j == pulse_basestart[jpul] - 1) :
                     newpulse_len = pulse_len[jpul] - blstart_h
 
-        totalintegral[jpul] = np.trapz(pulse[:newpulse_len])
+        for j in range(1, newpulse_len-1):
+            totalintegral[jpul] += pulse[j]
+        totalintegral[jpul] += 0.5*(pulse[0] + pulse[newpulse_len-1])
+#        totalintegral[jpul] = np.trapz(pulse[:newpulse_len])
 
     return totalintegral
 
@@ -68,11 +71,15 @@ def Baseline(baseend, ind1, pulse_len, pulses):
     baseline = np.zeros(n_pulses, dtype=np.float32)
     for jpul in range(n_pulses):
 # Baseline subtraction
-        ind2 = np.arange(pulse_baseend[jpul], pulse_len[jpul], dtype=np.int32)
-        ind_bl = np.unique(np.append(ind1, ind2))
-        for j in ind_bl:
+        nind = 0
+        for j in ind1:
             baseline[jpul] += pulses[jpul, j]
-        baseline[jpul] /= float(ind_bl.shape[0])
+            nind += 1
+        for j in range(pulse_baseend[jpul], pulse_len[jpul]):
+            if j > ind1[-1]:
+                baseline[jpul] += pulses[jpul, j]
+                nind += 1
+        baseline[jpul] /= float(nind)
     return baseline
 
 @nb.njit
@@ -291,6 +298,10 @@ class DPSD:
 
 
     def sfwrite(self, fsfh='NSP00000.sfh', exp='AUGD'):
+
+        import aug_sfutils as sf
+        from aug_sfutils import sfhmod
+        ww = sf.WW()
 
         diag = 'NSP'
         nsp = sf.SFREAD('NSP', self.nshot, exp=exp)
