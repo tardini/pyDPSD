@@ -111,7 +111,7 @@ def PileUpDet(nfront, ntail, nthres, front_led, tail_led, flags, pulses):
 class DPSD:
 
 
-    def __init__(self, dic_in, sfw=True, exp='AUGD', fsfh='NSP00000.sfh'):
+    def __init__(self, dic_in, ha=None, ha_path=None, t_ranges=None):
 
 
         self.nshot = int(dic_in['Shot'])
@@ -119,9 +119,10 @@ class DPSD:
 
 # Input
 
-        shot100 = self.nshot//100
-        filepath = '%s/%d/%d' %(dic_in['Path'], shot100, self.nshot)
-        HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
+        if ha_path is None:
+            shot100 = self.nshot//100
+            filepath = '%s/%d/%d' %(dic_in['Path'], shot100, self.nshot)
+            HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
 
         self.d_int = {}
         self.d_flt = {}
@@ -143,8 +144,21 @@ class DPSD:
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
         ha = read_ha.READ_HA(HAfile, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
 
-        (tind, ) = np.where((ha.t_events >= self.d_flt['TBeg']) & (ha.t_events <= self.d_flt['TEnd']))
-
+        if t_ranges is None:
+            (tind, ) = np.where((ha.t_events >= self.d_flt['TBeg']) & (ha.t_events <= self.d_flt['TEnd']))
+            self.dt = self.d_flt['TEnd'] - self.d_flt['TBeg']
+        else: # Force time ranges (make sure they don't overlap!)
+            depth = lambda L: isinstance(L, list) and max(map(depth, L))+1 # list depth
+            if depth(t_ranges) == 1:
+                t_ranges = [t_ranges]    
+            tind = np.array([], dtype=np.int32)
+            self.dt = 0
+            for jint, t_ran in enumerate(t_ranges):
+                (ind, ) = np.where((ha.t_events >= t_ran[0]) & (ha.t_events <= t_ran[1]))
+                tind = np.append(tind, ind)
+                self.dt += t_ran[1] - t_ran[0]
+            print(tind)
+            print(self.dt)
         time = ha.t_events[tind]
         print('TBeg = %8.4f' %time[0]) 
         print('TEnd = %8.4f' %time[-1]) 
@@ -282,9 +296,8 @@ class DPSD:
             cnt, tedges = np.histogram(time[flg[spec]], bins=n_timebins, range=[self.time[0]-0.5*self.d_flt['TimeBin'], self.time[-1]+0.5*self.d_flt['TimeBin']])
             phs, edges = np.histogram(np.float32(nxCh)/np.float32(self.d_int['Marker'])*self.TotalIntegral[flg[spec]], bins=nxCh, range=[-0.5, nxCh + 0.5])
             self.cnt[spec] = cnt.astype(np.float32)
-            self.phs[spec] = phs.astype(np.float32)
+            self.phs[spec] = phs.astype(np.float32)/self.dt
             logger.info('%s %d', spec, np.sum(flg[spec]))
-        logger.info('%s %d', 'LED', np.sum(flg['led']))
 
 # Move to 1/ units
         for spec in self.cnt.keys():
