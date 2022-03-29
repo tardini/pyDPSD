@@ -2,8 +2,6 @@ import sys, os, logging
 
 import numpy as np
 import numba as nb
-import matplotlib.pylab as plt
-from matplotlib.patches import Rectangle
 import dixm, read_ha
 
 
@@ -324,57 +322,6 @@ class DPSD:
                 print('Writing signal %s' %lbl)
                 status = ww.SetSignal(lbl, np.array(self.cnt[lbl], dtype=np.float32))
             ww.Close()
-
-
-    def plot(self):
-
-# PHA run
-
-        nbins = [4096, 1024]
-        ranges = [[0, 4095], [0, 1023]]
-        hpha, xedges, yedges = np.histogram2d(self.Xratio, self.Yratio, bins=nbins, range=ranges)
-        hpha = np.rot90(hpha)
-        hpha = np.flipud(hpha)
-        Hmasked = np.ma.masked_where(hpha == 0, hpha) # Mask pixels with a value of zer#
-
-        plt.figure('Pulse Shape separation', figsize = (13, 6.5))
-        plt.pcolormesh(xedges, yedges, np.log10(Hmasked))
-        cbar = plt.colorbar()
-
-        xknot = self.d_int['LineChange']
-        xline1 = [0, xknot]
-        yknot = self.d_flt['Offset'] + self.d_flt['Slope1'] * (self.d_int['LineChange'] + 1)
-        yline1 = [self.d_flt['Offset'], yknot]
-        xline2 = [xknot, nbins[0]]
-        yline2 = [yknot, yknot + self.d_flt['Slope2'] * (nbins[0] - xknot + 1)]
-        plt.plot(xline1, yline1, 'r-')
-        plt.plot(xline2, yline2, 'r-')
-        cbar.ax.set_ylabel('Counts')
-
-        xy = [self.d_int['LEDxmin'], self.d_int['LEDymin']]
-        width  = self.d_int['LEDxmax'] - self.d_int['LEDxmin']
-        height = self.d_int['LEDymax'] - self.d_int['LEDymin']
-        led_box = Rectangle(xy, width, height, color='b', fill=False)
-        plt.gca().add_patch(led_box)
-
-        plt.figure('PM gain')
-        plt.plot(self.time_led, self.pmgain/float(self.d_int['LEDreference']), 'r-')
-
-        plt.figure('Count rates')
-        for spec in sig1d:
-            plt.plot(self.time, self.cnt[spec], label=spec)
-        plt.legend()
-
-
-        plt.figure('Pulse Height spectrum')
-        ymax = 0
-        for spec in ['neut1', 'gamma1', 'led']:
-            plt.plot(self.phs[spec], label=spec)
-            ymax = max(ymax, np.max(self.phs[spec][1:]))
-        plt.ylim([0, ymax])
-        plt.legend()
-
-        plt.show()
 
 
 if __name__ == "__main__":
