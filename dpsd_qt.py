@@ -7,13 +7,13 @@ __date__    = '29.03.2022'
 import os, sys, logging
 
 try:
-    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox
+    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog
     from PyQt5.QtGui import QPixmap, QIcon
     from PyQt5.QtCore import Qt, QRect, QSize
     qt5 = True
 except:
     from PyQt4.QtCore import Qt, QRect, QSize
-    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox
+    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog
     qt5 = False
 
 import numpy as np
@@ -23,6 +23,7 @@ try:
 except:
     pass
 
+xml = dixm.DIX()
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 hnd = logging.StreamHandler()
@@ -51,7 +52,7 @@ class DPSD(QMainWindow):
 
         self.setWindowTitle('DPSD')
 
-        xwin  = 640
+        xwin  = 450
         ywin  = 630
         yhead = 44
         ybar  = 50
@@ -70,8 +71,10 @@ class DPSD(QMainWindow):
 
         menubar = self.menuBar()
         fileMenu = QMenu('&File', self)
+        xmlMenu  = QMenu('&Setup', self)
         helpMenu = QMenu('&Help', self)
         menubar.addMenu(fileMenu)
+        menubar.addMenu(xmlMenu)
         menubar.addMenu(helpMenu)
 
         runAction  = QAction('&Run'     , fileMenu)
@@ -87,6 +90,13 @@ class DPSD(QMainWindow):
         fileMenu.addAction(wsfAction)
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
+
+        loadAction  = QAction('&Load Setup', xmlMenu)
+        saveAction  = QAction('&Save Setup', xmlMenu)
+        xmlMenu.addAction(loadAction)
+        xmlMenu.addAction(saveAction)
+        loadAction.triggered.connect(self.load_xml)
+        saveAction.triggered.connect(self.save_xml)
 
         aboutAction = QAction('&About', helpMenu)
         aboutAction.triggered.connect(self.about)
@@ -108,7 +118,7 @@ class DPSD(QMainWindow):
 
 # User options
 
-        setup_en_d = dixm.DIX().xml2dict('/afs/ipp/home/g/git/DPSD/xml/default.xml')
+        setup_en_d = xml.xml2dict('%s/xml/default.xml' %dpsd_dir)
         self.gui = {}
         user = os.getenv('USER')
 
@@ -122,14 +132,14 @@ class DPSD(QMainWindow):
         entry_grid.addWidget(self.gui[key], jrow, 1, 1, 3)
         jrow += 1
         for key, val in setup_en_d.items():
-            if key in ('Path', 'Slice'):
+            if key in ('Path', ):
                 continue
             if key in cb_d.keys():
                 continue
             label = QLabel(key)
             self.gui[key] = QLineEdit(val)
             self.gui[key].setFixedWidth(90)
-            if jrow == 18:
+            if jrow == 19:
                 jrow = 1
                 jcol += 2
             entry_grid.addWidget(label        , jrow, jcol)
@@ -158,7 +168,7 @@ class DPSD(QMainWindow):
         h = tkhyper.HyperlinkMessageBox("Help", mytext, "500x60")
 
 
-    def run(self):
+    def get_gui(self):
 
         dpsd_dic = {}
         for key, val in self.gui.items():
@@ -166,6 +176,50 @@ class DPSD(QMainWindow):
                 dpsd_dic[key] = val.text()
             elif isinstance(val, QCheckBox):
                 dpsd_dic[key] = val.isChecked()
+
+        return dpsd_dic
+
+
+    def set_gui(self, xml_d):
+
+        for key, val in xml_d.items():
+            val = val.strip()
+            val_low = val.lower()
+            if val_low == 'false':
+                self.gui[key].setChecked(False)
+            elif val_low == 'true':
+                self.gui[key].setChecked(True)
+            else:
+                self.gui[key].setText(val)
+
+
+    def load_xml(self):
+
+        ftmp = QFileDialog.getOpenFileName(self, 'Open file', \
+            '%s/xml' %dpsd_dir, "xml files (*.xml)")
+        if qt5:
+            fxml = ftmp[0]
+        else:
+            fxml = str(ftmp)
+        setup_d = xml.xml2dict(fxml)
+        self.set_gui(setup_d)
+
+
+    def save_xml(self):
+
+        dpsd_dic = self.get_gui()
+        ftmp = QFileDialog.getSaveFileName(self, 'Save file', \
+            '%s/xml' %dpsd_dir, "xml files (*.xml)")
+        if qt5:
+            fxml = ftmp[0]
+        else:
+            fxml = str(ftmp)
+        xml.dict2xml(dpsd_dic, fxml)
+
+
+    def run(self):
+
+        dpsd_dic = self.get_gui()
         self.dp = dpsd.DPSD(dpsd_dic)
         logger.info('Done calculation')
 

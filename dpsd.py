@@ -113,23 +113,22 @@ class DPSD:
 
     def __init__(self, dic_in, sfw=True, exp='AUGD', fsfh='NSP00000.sfh'):
 
-        
-        self.nshot = int(dic_in['Acq1'])
+
+        self.nshot = int(dic_in['Shot'])
         log = logging.getLogger('DPSD')
 
 # Input
 
-#        filepath = '%s/%s/%s' %(dic_in['Path'], str(dic_in['Acq1']), str(dic_in['Acq1']))
         shot100 = self.nshot//100
         filepath = '%s/%d/%d' %(dic_in['Path'], shot100, self.nshot)
         HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
 
         self.d_int = {}
         self.d_flt = {}
-        int_list = ('BaselineStart', 'BaselineStart', 'BaselineEnd', \
-            'ShortGate', 'LongGate', 'TotalGate', 'Threshold', 'Front', 'Tail', \
+        int_list = ('Shot', 'BaselineStart', 'BaselineStart', 'BaselineEnd', \
+            'ShortGate', 'LongGate', 'Threshold', 'Front', 'Tail', \
             'Marker', 'SaturationHigh', 'SaturationLow', 'ToFWindowLength', \
-            'xChannels', 'yChannels', 'LineChange', \
+            'PH_nChannels', 'PS_nChannels', 'LineChange', \
             'LEDxmin', 'LEDxmax', 'LEDymin', 'LEDymax', 'LEDFront', 'LEDTail', 'LEDreference')
         flt_list = ('LEDdt', 'TimeBin', 'TBeg', 'TEnd', 'MaxDifference', 'Slope1', 'Slope2', 'Offset', )
 
@@ -138,8 +137,8 @@ class DPSD:
         for key in flt_list:
             self.d_flt[key] = float(dic_in[key])
 
-        nxCh = self.d_int['xChannels']
-        nyCh = self.d_int['yChannels']
+        nxCh = self.d_int['PH_nChannels']
+        nyCh = self.d_int['PS_nChannels']
 
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
         ha = read_ha.READ_HA(HAfile, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
@@ -274,7 +273,7 @@ class DPSD:
         flg['gamma1'] = (flg1g + flg2g) & (flg['phys'])
 
         cnt_list = ('neut1', 'gamma1', 'led', 'pileup', 'sat', 'phys')
-        nxCh = self.d_int['xChannels']
+        nxCh = self.d_int['PH_nChannels']
 
         self.cnt = {}
         self.phs = {}

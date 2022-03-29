@@ -61,7 +61,7 @@ def fig_pha(dpsd, color='#c00000'):
     fig.subplots_adjust(left=0.05, bottom=0.07, right=0.98, top=0.94, hspace=0, wspace=0.4)
     fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
-    nbins = [dpsd.d_int['xChannels'], dpsd.d_int['yChannels']]
+    nbins = [dpsd.d_int['PH_nChannels'], dpsd.d_int['PS_nChannels']]
     ranges = [[-0.5, nbins[0]+0.5], [-0.5, nbins[1]+0.5]]
     hpha, xedges, yedges = np.histogram2d(dpsd.Xratio, dpsd.Yratio, bins=nbins, range=ranges)
     hpha = np.rot90(hpha)
@@ -101,7 +101,7 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
     for spec in ['neut1', 'gamma1', 'led']:
         plt.plot(dpsd.phs[spec], label=spec)
         ymax = max(ymax, np.max(dpsd.phs[spec]))
-    plt.xlim([0, dpsd.d_int['xChannels']])
+    plt.xlim([0, dpsd.d_int['PH_nChannels']])
     plt.ylim([0, ymax])
     plt.legend()
 
