@@ -105,6 +105,7 @@ class DPSD(QMainWindow):
         user = os.getenv('USER')
 
 # Entry widgets
+        cb_d = {'SubtBaseline': 'Subtract baseline', 'LEDcorrection': 'LED correction'}
         jcol = 0
         jrow = 0
         key = 'Path'
@@ -113,7 +114,9 @@ class DPSD(QMainWindow):
         entry_grid.addWidget(self.gui[key], jrow, 1, 1, 3)
         jrow += 1
         for key, val in setup_en_d.items():
-            if key == 'Path':
+            if key in ('Path', 'Slice'):
+                continue
+            if key in cb_d.keys():
                 continue
             label = QLabel(key)
             self.gui[key] = QLineEdit(val)
@@ -127,9 +130,6 @@ class DPSD(QMainWindow):
 
 # Checkbutton
 
-        keys = ['SubtBaseline', 'LEDcorrection']
-        cb_d = {'SubtBaseline': 'Subtract baseline', 'LEDcorrection': 'LED correction'}
-
         jrow = 18
         for key, lbl in cb_d.items():
             jrow += 1
@@ -140,7 +140,7 @@ class DPSD(QMainWindow):
         self.setStyleSheet("QLabel { width: 4 }")
         self.setStyleSheet("QLineEdit { width: 4 }")
         self.setGeometry(10, 10, xwin, ywin)
-        self.setWindowTitle('Confinement')
+        self.setWindowTitle('DPSD')
         self.show()
 
 
