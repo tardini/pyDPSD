@@ -235,9 +235,6 @@ class DPSD:
 # LED correction
 
         logger.info('LED correction')
-        self.cnt = {}
-        led, tedges = np.histogram(time[flg['led']], bins=n_timebins, range=[self.time[0]-0.5*self.d_flt['TimeBin'], self.time[-1]+0.5*self.d_flt['TimeBin']])
-        self.cnt['led'] = led.astype(np.float32)
 
         jtime_old = 0
         jtmark = 0
@@ -278,11 +275,17 @@ class DPSD:
         flg['neut1']  = (flg1  + flg2 ) & (flg['phys'])
         flg['gamma1'] = (flg1g + flg2g) & (flg['phys'])
 
-        cnt_list = ('neut1', 'gamma1', 'pileup', 'sat', 'phys')
+        cnt_list = ('neut1', 'gamma1', 'led', 'pileup', 'sat', 'phys')
+        nxCh = self.d_int['xChannels']
+
+        self.cnt = {}
+        self.phs = {}
 
         for spec in cnt_list:
             cnt, tedges = np.histogram(time[flg[spec]], bins=n_timebins, range=[self.time[0]-0.5*self.d_flt['TimeBin'], self.time[-1]+0.5*self.d_flt['TimeBin']])
+            phs, edges = np.histogram(np.float32(nxCh)/np.float32(self.d_int['Marker'])*self.TotalIntegral[flg[spec]], bins=nxCh, range=[-0.5, nxCh + 0.5])
             self.cnt[spec] = cnt.astype(np.float32)
+            self.phs[spec] = phs.astype(np.float32)
             logger.info('%s %d', spec, np.sum(flg[spec]))
         logger.info('%s %d', 'LED', np.sum(flg['led']))
 
@@ -354,15 +357,23 @@ class DPSD:
         led_box = Rectangle(xy, width, height, color='b', fill=False)
         plt.gca().add_patch(led_box)
 
+        plt.figure('PM gain')
+        plt.plot(self.time_led, self.pmgain/float(self.d_int['LEDreference']), 'r-')
 
         plt.figure('Count rates')
         for spec in sig1d:
             plt.plot(self.time, self.cnt[spec], label=spec)
-
         plt.legend()
 
-        plt.figure('PM gain')
-        plt.plot(self.time_led, self.pmgain/float(self.d_int['LEDreference']), 'r-')
+
+        plt.figure('Pulse Height spectrum')
+        ymax = 0
+        for spec in ['neut1', 'gamma1', 'led']:
+            plt.plot(self.phs[spec], label=spec)
+            ymax = max(ymax, np.max(self.phs[spec][1:]))
+        plt.ylim([0, ymax])
+        plt.legend()
+
         plt.show()
 
 

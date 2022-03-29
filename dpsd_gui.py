@@ -30,17 +30,31 @@ class DPSD_GUI:
 
 
         if __name__ == '__main__':
-            topframe = tk.Tk()
+            dpsdframe = tk.Tk()
             import ttk_style
         else:
-            topframe = tk.Toplevel()
+            dpsdframe = tk.Toplevel()
 
-        topframe.title('DPSD')
-        setup_en_d = dixm.DIX().xml2dict('/afs/ipp/home/g/git/DPSD/xml/default.xml')
+        dpsdframe.title('DPSD')
 
-        toolframe = ttk.Frame(topframe)
-        entframe  = ttk.Frame(topframe)
-        cbframe   = ttk.Frame(topframe)
+# Menubar
+
+        menubar = tk.Menu(dpsdframe)
+        filemenu = tk.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Run"     , command=self.run)
+        filemenu.add_command(label="Plot"    , command=self.plot)
+        filemenu.add_command(label="Write SF", command=self.write_sf)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=sys.exit)
+        helpmenu = tk.Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="About", command=self.about)
+        menubar.add_cascade(label="File", menu=filemenu)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+        dpsdframe.config(menu=menubar)
+
+        toolframe = ttk.Frame(dpsdframe)
+        entframe  = ttk.Frame(dpsdframe)
+        cbframe   = ttk.Frame(dpsdframe)
 
         for frame in toolframe, entframe, cbframe:
             frame.pack(side=tk.TOP, fill =tk.BOTH, expand=1)
@@ -61,7 +75,7 @@ class DPSD_GUI:
             btsave.pack(side=tk.LEFT)
 
 # Entries
-
+        setup_en_d = dixm.DIX().xml2dict('/afs/ipp/home/g/git/DPSD/xml/default.xml')
         self.dpsd_d = {}
 
         cbdic = {'GraphPulse':False, 'GraphTime':False, 'GraphWin':False, 'SubtBaseline':True, 'LEDcorrection':True}
@@ -94,7 +108,11 @@ class DPSD_GUI:
             self.dpsd_d[key].set(cbdic[key])
             ttk.Checkbutton(cbframe, variable=self.dpsd_d[key], text=key).pack(side=tk.LEFT, padx='10 2', pady='10 2')
 
-        topframe.mainloop()
+        dpsdframe.mainloop()
+
+
+    def about(self):
+        pass
 
 
     def run(self):
