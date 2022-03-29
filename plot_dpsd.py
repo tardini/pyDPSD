@@ -38,7 +38,7 @@ class plotWindow(QWidget):
         self.setGeometry(QRect(80, 30, 1200, 710))
         self.tabs = QTabWidget(self)
 
-        self.setWindowTitle('Time traces')
+        self.setWindowTitle('DPSD output')
 
 
     def addPlot(self, title, figure):
