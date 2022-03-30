@@ -113,22 +113,11 @@ def PileUpDet(nfront, ntail, nthres, front_led, tail_led, flags, pulses):
 class DPSD:
 
 
-    def __init__(self, dic_in, ha=None, ha_path=None, t_ranges=None):
-
-
-        self.nshot = int(dic_in['Shot'])
-        log = logging.getLogger('DPSD')
-
-# Input
-
-        if ha_path is None:
-            shot100 = self.nshot//100
-            filepath = '%s/%d/%d' %(dic_in['Path'], shot100, self.nshot)
-            HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
+    def __init__(self, dic_in, t_ranges=None):
 
         self.d_int = {}
         self.d_flt = {}
-        int_list = ('Shot', 'BaselineStart', 'BaselineStart', 'BaselineEnd', \
+        int_list = ('BaselineStart', 'BaselineStart', 'BaselineEnd', \
             'ShortGate', 'LongGate', 'Threshold', 'Front', 'Tail', \
             'Marker', 'SaturationHigh', 'SaturationLow', 'ToFWindowLength', \
             'PH_nChannels', 'PS_nChannels', 'LineChange', \
@@ -139,6 +128,19 @@ class DPSD:
             self.d_int[key] = int(dic_in[key])
         for key in flt_list:
             self.d_flt[key] = float(dic_in[key])
+        HAfile = dic_in['HAfile'].strip()
+        n_shots = np.atleast_1d(eval(dic_in['Shots']))
+        if HAfile != '':
+            self.run(HAfile, t_ranges=t_ranges)
+        else:
+            for nshot in n_shots:
+                self.nshot = int(nshot)
+                shot100 = self.nshot//100
+                filepath = '/afs/ipp/augd/rawfiles/NSP/%d/%d' %(shot100, self.nshot)
+                HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
+
+
+    def run(self, HAfile, t_ranges=None):
 
         nxCh = self.d_int['PH_nChannels']
         nyCh = self.d_int['PS_nChannels']
@@ -202,8 +204,8 @@ class DPSD:
         max_LG = np.minimum(maxpos + self.d_int['LongGate' ], self.winlen)
         max_SG = np.minimum(maxpos + self.d_int['ShortGate'], self.winlen)
         tof_win_len = self.d_int['ToFWindowLength']
-        sat_high = float(dic_in['SaturationHigh'])
-        sat_low  = float(dic_in['SaturationLow'])
+        sat_high = float(self.d_int['SaturationHigh'])
+        sat_low  = float(self.d_int['SaturationLow'])
         pulse_len = np.minimum(self.winlen, tof_win_len)
         pulse_baseend = pulse_len - self.d_int['BaselineEnd']
         

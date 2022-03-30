@@ -53,7 +53,7 @@ class DPSD(QMainWindow):
         self.setWindowTitle('DPSD')
 
         xwin  = 450
-        ywin  = 630
+        ywin  = 660
         yhead = 44
         ybar  = 50
 
@@ -123,24 +123,30 @@ class DPSD(QMainWindow):
         user = os.getenv('USER')
 
 # Entry widgets
-        cb_d = {'SubtBaseline': 'Subtract baseline', 'LEDcorrection': 'LED correction'}
+        cb_d = {'SubtBaseline': 'Subtract baseline', 'LEDcorrection': 'LED correction', 'SFwrite': 'Write shotfiles'}
         jcol = 0
         jrow = 0
-        key = 'Path'
+        key = 'HAfile'
         self.gui[key] = QLineEdit(setup_en_d[key])
         entry_grid.addWidget(QLabel(key), jrow, 0)
         entry_grid.addWidget(self.gui[key], jrow, 1, 1, 3)
-        jrow += 1
+        key = 'Shots'
+        self.gui[key] = QLineEdit(setup_en_d[key])
+        entry_grid.addWidget(QLabel(key), jrow+1, 0)
+        entry_grid.addWidget(self.gui[key], jrow+1, 1, 1, 3)
+        row_init = 2
+        row_end = 20
+        jrow += row_init
         for key, val in setup_en_d.items():
-            if key in ('Path', ):
+            if key in ('HAfile', 'Shots'):
                 continue
             if key in cb_d.keys():
                 continue
             label = QLabel(key)
             self.gui[key] = QLineEdit(val)
             self.gui[key].setFixedWidth(90)
-            if jrow == 19:
-                jrow = 1
+            if jrow == row_end:
+                jrow = row_init
                 jcol += 2
             entry_grid.addWidget(label        , jrow, jcol)
             entry_grid.addWidget(self.gui[key], jrow, jcol+1)
@@ -148,12 +154,13 @@ class DPSD(QMainWindow):
 
 # Checkbutton
 
-        jrow = 18
+        jrow = row_end
         for key, lbl in cb_d.items():
             jrow += 1
             self.gui[key] = QCheckBox(lbl)
             entry_grid.addWidget(self.gui[key], jrow, 0, 1, 2)
-            self.gui[key].setChecked(True)
+            if setup_en_d[key].lower().strip() == 'true':
+                self.gui[key].setChecked(True)
 
         self.setStyleSheet("QLabel { width: 4 }")
         self.setStyleSheet("QLineEdit { width: 4 }")
@@ -189,6 +196,8 @@ class DPSD(QMainWindow):
                 self.gui[key].setChecked(False)
             elif val_low == 'true':
                 self.gui[key].setChecked(True)
+            elif val_low == '':
+                self.gui[key].setText(' ')
             else:
                 self.gui[key].setText(val)
 
