@@ -235,11 +235,13 @@ class DPSD(QMainWindow):
         fig2 = plot_dpsd.fig_phs(self.dp)
         fig3 = plot_dpsd.fig_cnt(self.dp)
         fig4 = plot_dpsd.fig_pmg(self.dp)
+        fig5 = plot_dpsd.fig_win(self.dp)
 
         self.wid.addPlot('PH-PS separation'     , fig1)
         self.wid.addPlot('Pulse Height spectrum', fig2)
         self.wid.addPlot('Count rates'          , fig3)
         self.wid.addPlot('PM gain'              , fig4)
+        self.wid.addPlot('Window length distribution', fig5)
 
         self.wid.show()
  

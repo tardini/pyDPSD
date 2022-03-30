@@ -21,12 +21,11 @@ def slice_trapz(a, bnd_l, bnd_r):
         for i in range(bnd_l[j]+1, bnd_r[j]-1):
             b[j] += a[j, i]
         b[j] += 0.5*(a[j, bnd_l[j]] + a[j, bnd_r[j]-1])
-#       b = np.trapz(a[j, bnd_l[j]: bnd_r[j]])
     return b
 
 
 @nb.njit
-def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, aver1, max_lg):
+def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, max_lg):
 
     n_pulses = maxpos.shape[0]
     pulse_basestart = pulse_len - bl_start
@@ -39,12 +38,16 @@ def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, aver1, max_lg):
         if pulse_basestart[jpul] >= maxpos[jpul]:
             newpulse_len = pulse_len[jpul] - blstart_h
         else:
+            aver1 = 0.
+            for i in range(bl_start):
+                aver1 += pulse[i]
+            aver1 /= float(bl_start)
             for j in range(maxpos[jpul], pulse_basestart[jpul]):
                 aver2 = 0.
                 for i in range(j, j + bl_start):
                     aver2 += pulse[i]
                 aver2 /= float(bl_start)
-                if np.abs(aver2 - aver1[jpul]) < max_diff:
+                if np.abs(aver2 - aver1) < max_diff:
                     if max_lg[jpul] > j + blstart_h:
                         newpulse_len = max_lg[jpul]
                     else:
@@ -56,13 +59,12 @@ def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, aver1, max_lg):
         for j in range(1, newpulse_len-1):
             totalintegral[jpul] += pulse[j]
         totalintegral[jpul] += 0.5*(pulse[0] + pulse[newpulse_len-1])
-#        totalintegral[jpul] = np.trapz(pulse[:newpulse_len])
 
     return totalintegral
 
 
 @nb.njit
-def Baseline(baseend, ind1, pulse_len, pulses):
+def Baseline(basestart, baseend, pulse_len, pulses):
 
     n_pulses = pulses.shape[0]
     pulse_baseend = pulse_len - baseend
@@ -70,11 +72,11 @@ def Baseline(baseend, ind1, pulse_len, pulses):
     for jpul in range(n_pulses):
 # Baseline subtraction
         nind = 0
-        for j in ind1:
+        for j in range(basestart):
             baseline[jpul] += pulses[jpul, j]
             nind += 1
         for j in range(pulse_baseend[jpul], pulse_len[jpul]):
-            if j > ind1[-1]:
+            if j >= basestart:
                 baseline[jpul] += pulses[jpul, j]
                 nind += 1
         baseline[jpul] /= float(nind)
@@ -172,9 +174,8 @@ class DPSD:
         self.Xratio = np.zeros(n_pulses, dtype=np.float32)
         self.Yratio = np.zeros(n_pulses, dtype=np.float32)
 
-        winlen = ha.winlen[tind]
+        self.winlen = ha.winlen[tind]
         pulses = ha.pulses[tind]
-        hist_len = np.bincount(winlen)
 
 # Initialise
         flg_sat   = np.zeros(n_pulses)
@@ -194,36 +195,35 @@ class DPSD:
         logger.info('Starting time loop')
 
         print('# pulses: %6d' % n_pulses)
-        ind1 = np.arange(self.d_int['BaselineStart'], dtype=np.int32)
+
         maxpos = np.argmax(pulses, axis=1)
         pulse_max = np.max(pulses, axis=1)
 
-        max_LG = np.minimum(maxpos + self.d_int['LongGate' ], winlen)
-        max_SG = np.minimum(maxpos + self.d_int['ShortGate'], winlen)
+        max_LG = np.minimum(maxpos + self.d_int['LongGate' ], self.winlen)
+        max_SG = np.minimum(maxpos + self.d_int['ShortGate'], self.winlen)
         tof_win_len = self.d_int['ToFWindowLength']
         sat_high = float(dic_in['SaturationHigh'])
         sat_low  = float(dic_in['SaturationLow'])
-        pulse_len = np.minimum(winlen, tof_win_len)
+        pulse_len = np.minimum(self.winlen, tof_win_len)
         pulse_baseend = pulse_len - self.d_int['BaselineEnd']
         
         logger.info('Baseline subtraction')
-        pulses_flt = pulses.astype(np.float32)
-        baseline = Baseline(self.d_int['BaselineEnd'], ind1, pulse_len, pulses_flt)
-        pulses_flt -= baseline[:, None]
+        self.pulses = pulses.astype(np.float32)
+        baseline = Baseline(self.d_int['BaselineStart'], self.d_int['BaselineEnd'], pulse_len, self.pulses)
+        self.pulses -= baseline[:, None]
 
 # Saturation detection
         logger.info('Saturation detection')
-        (ind_sat_high, ) = np.where(np.max(pulses_flt, axis=1) > sat_high)
-        (ind_sat_low, )  = np.where(np.min(pulses_flt, axis=1) < sat_low) 
+        (ind_sat_high, ) = np.where(np.max(self.pulses, axis=1) > sat_high)
+        (ind_sat_low, )  = np.where(np.min(self.pulses, axis=1) < sat_low) 
         flg_sat[ind_sat_high] = 1
         flg_sat[ind_sat_low]  = 2
 
         logger.info('Baseline conditioned 2') 
-        aver1 = np.average(pulses_flt[:, ind1], axis=1)
 
-        self.TotalIntegral = BaselineCond2(self.d_int['BaselineStart'], self.d_flt['MaxDifference'], pulses_flt, pulse_len, maxpos, aver1, max_LG)
-        self.ShortIntegral = slice_trapz(pulses_flt, maxpos, max_SG)
-        self.LongIntegral  = slice_trapz(pulses_flt, maxpos, max_LG)
+        self.TotalIntegral = BaselineCond2(self.d_int['BaselineStart'], self.d_flt['MaxDifference'], self.pulses, pulse_len, maxpos, max_LG)
+        self.ShortIntegral = slice_trapz(self.pulses, maxpos, max_SG)
+        self.LongIntegral  = slice_trapz(self.pulses, maxpos, max_LG)
         mark = np.float32(nxCh)/np.float32(self.d_int['Marker'])
         ind3 = np.where(self.LongIntegral > 0)[0]
 

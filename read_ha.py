@@ -46,7 +46,7 @@ class READ_HA:
 
         (ind_ok, ) = np.where((winlen %2 == 0) & (winlen > min_winlen))
         self.winlen = winlen[ind_ok]
-        self.tdiff = tdiff[ind_ok]
+
         win_start = boundaries[ind_ok] + 4
 
         data = data.astype(np.int16)
@@ -66,7 +66,7 @@ class READ_HA:
 
         self.pulses = raw2pulse(max_winlen, win_start, pulse_len, self.rawdata)
 
-        self.t_events = 1e-8*(np.cumsum(self.tdiff, dtype=np.float32))
+        self.t_events = 1e-8*(np.cumsum(tdiff, dtype=np.float32))[ind_ok]
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
         logger.debug('%d', len(self.pulses))
 

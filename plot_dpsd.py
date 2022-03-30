@@ -138,3 +138,18 @@ def fig_pmg(dpsd):
     plt.ylim([0, 1.5])
 
     return fig
+
+
+def fig_win(dpsd):
+
+    fig = plt.figure(figsize=(8.0, 6.3), dpi=100)
+
+    fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
+    fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
+
+    win_min = np.min(dpsd.winlen)
+    win_max = np.max(dpsd.winlen)
+    plt.hist(dpsd.winlen, bins=win_max)
+    plt.xlim([win_min, win_max])
+
+    return fig
