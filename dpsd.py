@@ -118,6 +118,7 @@ class DPSD:
         self.d_int = {}
         self.d_flt = {}
         int_list = ('BaselineStart', 'BaselineStart', 'BaselineEnd', \
+            'DDlower', 'DDupper', 'DTlower', 'DTupper', \
             'ShortGate', 'LongGate', 'Threshold', 'Front', 'Tail', \
             'Marker', 'SaturationHigh', 'SaturationLow', 'ToFWindowLength', \
             'PH_nChannels', 'PS_nChannels', 'LineChange', \
@@ -148,6 +149,7 @@ class DPSD:
 
         nxCh = self.d_int['PH_nChannels']
         nyCh = self.d_int['PS_nChannels']
+        dxCh = np.float32(nxCh)/np.float32(self.d_int['Marker'])
 
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
         ha = read_ha.READ_HA(HAfile, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
@@ -176,9 +178,6 @@ class DPSD:
         print('n_timebins = %d' %n_timebins)
         self.time = time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
         self.time_led = time[0] + self.d_flt['LEDdt']*(0.5 + np.arange(n_led))
-
-        self.Xratio = np.zeros(n_pulses, dtype=np.float32)
-        self.Yratio = np.zeros(n_pulses, dtype=np.float32)
 
         self.winlen = ha.winlen[tind]
         pulses = ha.pulses[tind]
@@ -230,20 +229,20 @@ class DPSD:
         self.TotalIntegral = BaselineCond2(self.d_int['BaselineStart'], self.d_flt['MaxDifference'], self.pulses, pulse_len, maxpos, max_LG)
         self.ShortIntegral = slice_trapz(self.pulses, maxpos, max_SG)
         self.LongIntegral  = slice_trapz(self.pulses, maxpos, max_LG)
-        mark = np.float32(nxCh)/np.float32(self.d_int['Marker'])
         ind3 = np.where(self.LongIntegral > 0)[0]
+
+        self.PulseHeight = dxCh*self.TotalIntegral
+        self.PulseShape = np.float32(nyCh)*self.ShortIntegral/self.LongIntegral
 
 # LED evaluation
 
-        self.Xratio[ind3] = mark*self.TotalIntegral[ind3]
-        self.Yratio[ind3] = np.float32(nyCh)*self.ShortIntegral[ind3]/self.LongIntegral[ind3];
         flg = {}
 
         flg['led'] =  \
-            (self.Xratio > float(self.d_int['LEDxmin'])) & \
-            (self.Xratio < float(self.d_int['LEDxmax'])) & \
-            (self.Yratio > float(self.d_int['LEDymin'])) & \
-            (self.Yratio < float(self.d_int['LEDymax'])) 
+            (self.PulseHeight > float(self.d_int['LEDxmin'])) & \
+            (self.PulseHeight < float(self.d_int['LEDxmax'])) & \
+            (self.PulseShape > float(self.d_int['LEDymin'])) & \
+            (self.PulseShape < float(self.d_int['LEDymax'])) 
 
         logger.info('Pile-up detection')
 
@@ -263,11 +262,11 @@ class DPSD:
             jtime = tled[jpul]
             if (jtime > jtime_old):
                 if LEDamount > 0:
-                    self.pmgain[jtime] = mark*np.float32(LEDsumm)/np.float32(LEDamount)
+                    self.pmgain[jtime] = dxCh*np.float32(LEDsumm)/np.float32(LEDamount)
                     if LEDsumm > 0:
                         LEDcoeff = np.float32(self.d_int['LEDreference'])/self.pmgain[jtime]
                 self.TotalIntegral[jtmark: jpul] *= LEDcoeff
-                self.Xratio[jtmark: jpul] *= LEDcoeff
+                self.PulseHeight[jtmark: jpul] *= LEDcoeff
                 jtmark = jpul
                 LEDsumm = 0
                 LEDamount = 0
@@ -277,10 +276,10 @@ class DPSD:
                 LEDamount += 1
             jtime_old = jtime
 
-        flg_slope1 = (self.Xratio <= self.d_int['LineChange'])
-        flg1n = (self.Yratio <= self.d_flt['Offset'] + self.d_flt['Slope1']*self.Xratio)
+        flg_slope1 = (self.PulseHeight <= self.d_int['LineChange'])
+        flg1n = (self.PulseShape <= self.d_flt['Offset'] + self.d_flt['Slope1']*self.PulseHeight)
         offset2 = self.d_flt['Offset'] + self.d_flt['Slope1']*self.d_int['LineChange']
-        flg2n = (self.Yratio <= offset2 + self.d_flt['Slope2']*(self.Xratio-self.d_int['LineChange']))
+        flg2n = (self.PulseShape <= offset2 + self.d_flt['Slope2']*(self.PulseHeight-self.d_int['LineChange']))
 
         flg1  =   flg_slope1  & flg1n
         flg2  = (~flg_slope1) & flg2n
@@ -291,8 +290,14 @@ class DPSD:
         flg['phys'] =  (~flg['sat']) & (~flg['led']) & (~flg['pileup'])
         flg['neut1']  = (flg1  + flg2 ) & (flg['phys'])
         flg['gamma1'] = (flg1g + flg2g) & (flg['phys'])
+        flg['DD'] = flg['neut1'] & \
+            (self.PulseHeight >= self.d_int['DDlower']) & \
+            (self.PulseHeight <= self.d_int['DDupper'])
+        flg['DT'] = flg['neut1'] & \
+            (self.PulseHeight >= self.d_int['DTlower']) & \
+            (self.PulseHeight <= self.d_int['DTupper'])
 
-        cnt_list = ('neut1', 'gamma1', 'led', 'pileup', 'sat', 'phys')
+        cnt_list = ('neut1', 'gamma1', 'led', 'pileup', 'sat', 'phys', 'DD', 'DT')
         nxCh = self.d_int['PH_nChannels']
 
         self.cnt = {}
