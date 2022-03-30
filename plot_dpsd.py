@@ -59,7 +59,8 @@ def fig_pha(dpsd, color='#c00000'):
 
     fig = plt.figure(figsize=(12., 6.3), dpi=100)
     fig.subplots_adjust(left=0.05, bottom=0.07, right=0.98, top=0.94, hspace=0, wspace=0.4)
-    fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
+    if hasattr(dpsd, 'nshot'):
+        fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     nbins = [dpsd.d_int['PH_nChannels'], dpsd.d_int['PS_nChannels']]
     ranges = [[-0.5, nbins[0]+0.5], [-0.5, nbins[1]+0.5]]
@@ -95,7 +96,8 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
     fig = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
     fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
-    fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
+    if hasattr(dpsd, 'nshot'):
+        fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     ymax = 0
     for spec in ['neut1', 'gamma1', 'led']:
@@ -113,7 +115,8 @@ def fig_cnt(dpsd, color='#c00000', ymax=2, titles=None):
     fig = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
     fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
-    fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
+    if hasattr(dpsd, 'nshot'):
+        fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     ymax = 0
     for spec in sig1d:
@@ -131,7 +134,8 @@ def fig_pmg(dpsd):
     fig = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
     fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
-    fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
+    if hasattr(dpsd, 'nshot'):
+        fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     plt.plot(dpsd.time_led, dpsd.pmgain/float(dpsd.d_int['LEDreference']), 'r-')
     plt.xlim([dpsd.time[0], dpsd.time[-1]])
@@ -145,7 +149,8 @@ def fig_win(dpsd):
     fig = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
     fig.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
-    fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
+    if hasattr(dpsd, 'nshot'):
+        fig.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     win_min = np.min(dpsd.winlen)
     win_max = np.max(dpsd.winlen)

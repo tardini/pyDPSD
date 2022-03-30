@@ -129,15 +129,19 @@ class DPSD:
         for key in flt_list:
             self.d_flt[key] = float(dic_in[key])
         HAfile = dic_in['HAfile'].strip()
-        n_shots = np.atleast_1d(eval(dic_in['Shots']))
         if HAfile != '':
+            self.HAfile = HAfile
             self.run(HAfile, t_ranges=t_ranges)
         else:
+            n_shots = np.atleast_1d(eval(dic_in['Shots']))
             for nshot in n_shots:
+                logger.info(nshot)
                 self.nshot = int(nshot)
                 shot100 = self.nshot//100
                 filepath = '/afs/ipp/augd/rawfiles/NSP/%d/%d' %(shot100, self.nshot)
                 HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
+                self.HAfile = HAfile
+                self.run(HAfile, t_ranges=t_ranges)
 
 
     def run(self, HAfile, t_ranges=None):
