@@ -169,15 +169,15 @@ class DPSD:
                 self.dt += t_ran[1] - t_ran[0]
             print(tind)
             print(self.dt)
-        time = ha.t_events[tind]
-        print('TBeg = %8.4f' %time[0]) 
-        print('TEnd = %8.4f' %time[-1]) 
-        n_pulses = len(time)
-        n_timebins = int((time[-1] - time[0])/self.d_flt['TimeBin'])
-        n_led = int((time[-1] - time[0])/self.d_flt['LEDdt'])
+        self.time = ha.t_events[tind]
+        print('TBeg = %8.4f' %self.time[0]) 
+        print('TEnd = %8.4f' %self.time[-1]) 
+        n_pulses = len(self.time)
+        n_timebins = int((self.time[-1] - self.time[0])/self.d_flt['TimeBin'])
+        n_led = int((self.time[-1] - self.time[0])/self.d_flt['LEDdt'])
         print('n_timebins = %d' %n_timebins)
-        self.time = time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
-        self.time_led = time[0] + self.d_flt['LEDdt']*(0.5 + np.arange(n_led))
+        self.time_cnt = self.time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
+        self.time_led = self.time[0] + self.d_flt['LEDdt']*(0.5 + np.arange(n_led))
 
         self.winlen = ha.winlen[tind]
         pulses = ha.pulses[tind]
@@ -236,9 +236,9 @@ class DPSD:
 
 # LED evaluation
 
-        flg = {}
+        self.flg = {}
 
-        flg['led'] =  \
+        self.flg['led'] =  \
             (self.PulseHeight > float(self.d_int['LEDxmin'])) & \
             (self.PulseHeight < float(self.d_int['LEDxmax'])) & \
             (self.PulseShape > float(self.d_int['LEDymin'])) & \
@@ -246,7 +246,7 @@ class DPSD:
 
         logger.info('Pile-up detection')
 
-        self.flg_peaks = PileUpDet(self.d_int['Front'], self.d_int['Tail'], self.d_int['Threshold'], self.d_int['LEDFront'], self.d_int['LEDTail'], flg['led'], pulses)
+        self.flg_peaks = PileUpDet(self.d_int['Front'], self.d_int['Tail'], self.d_int['Threshold'], self.d_int['LEDFront'], self.d_int['LEDTail'], self.flg['led'], pulses)
 
 # LED correction
 
@@ -257,7 +257,7 @@ class DPSD:
         LEDsumm = 0
         LEDamount = 0
         LEDcoeff = 0
-        tled = ((time - time[0])/self.d_flt['LEDdt']).astype(np.int32) - 1
+        tled = ((self.time - self.time[0])/self.d_flt['LEDdt']).astype(np.int32) - 1
         for jpul in range(n_pulses):
             jtime = tled[jpul]
             if (jtime > jtime_old):
@@ -271,7 +271,7 @@ class DPSD:
                 LEDsumm = 0
                 LEDamount = 0
                 LEDcoeff = 0
-            if flg['led'][jpul]: # LED single pulse
+            if self.flg['led'][jpul]: # LED single pulse
                 LEDsumm += self.TotalIntegral[jpul]
                 LEDamount += 1
             jtime_old = jtime
@@ -285,17 +285,23 @@ class DPSD:
         flg2  = (~flg_slope1) & flg2n
         flg1g =   flg_slope1  & (~flg1n)
         flg2g = (~flg_slope1) & (~flg2n)
-        flg['sat'] = (flg_sat > 0)
-        flg['pileup'] = (self.flg_peaks > 1)
-        flg['phys'] =  (~flg['sat']) & (~flg['led']) & (~flg['pileup'])
-        flg['neut1']  = (flg1  + flg2 ) & (flg['phys'])
-        flg['gamma1'] = (flg1g + flg2g) & (flg['phys'])
-        flg['DD'] = flg['neut1'] & \
+        self.flg['sat'] = (flg_sat > 0)
+        self.flg['pileup'] = (self.flg_peaks > 1)
+        self.flg['phys'] =  (~self.flg['sat']) & (~self.flg['led']) & (~self.flg['pileup'])
+        self.flg['neut1']  = (flg1  + flg2 ) & (self.flg['phys'])
+        self.flg['gamma1'] = (flg1g + flg2g) & (self.flg['phys'])
+        self.flg['DD'] = self.flg['neut1'] & \
             (self.PulseHeight >= self.d_int['DDlower']) & \
             (self.PulseHeight <= self.d_int['DDupper'])
-        flg['DT'] = flg['neut1'] & \
+        self.flg['DT'] = self.flg['neut1'] & \
             (self.PulseHeight >= self.d_int['DTlower']) & \
             (self.PulseHeight <= self.d_int['DTupper'])
+
+        self.event_type = np.zeros(n_pulses, dtype=np.int32) - 1
+        self.event_type[self.flg['neut1']]  = 0
+        self.event_type[self.flg['gamma1']] = 1
+        self.event_type[self.flg['pileup']] = 2
+        self.event_type[self.flg['led']]    = 3
 
         cnt_list = ('neut1', 'gamma1', 'led', 'pileup', 'sat', 'phys', 'DD', 'DT')
         nxCh = self.d_int['PH_nChannels']
@@ -304,11 +310,11 @@ class DPSD:
         self.phs = {}
 
         for spec in cnt_list:
-            cnt, tedges = np.histogram(time[flg[spec]], bins=n_timebins, range=[self.time[0]-0.5*self.d_flt['TimeBin'], self.time[-1]+0.5*self.d_flt['TimeBin']])
-            phs, edges = np.histogram(np.float32(nxCh)/np.float32(self.d_int['Marker'])*self.TotalIntegral[flg[spec]], bins=nxCh, range=[-0.5, nxCh + 0.5])
+            cnt, tedges = np.histogram(self.time[self.flg[spec]], bins=n_timebins, range=[self.time_cnt[0]-0.5*self.d_flt['TimeBin'], self.time_cnt[-1]+0.5*self.d_flt['TimeBin']])
+            phs, edges = np.histogram(np.float32(nxCh)/np.float32(self.d_int['Marker'])*self.TotalIntegral[self.flg[spec]], bins=nxCh, range=[-0.5, nxCh + 0.5])
             self.cnt[spec] = cnt.astype(np.float32)
             self.phs[spec] = phs.astype(np.float32)/self.dt
-            logger.info('%s %d', spec, np.sum(flg[spec]))
+            logger.info('%s %d', spec, np.sum(self.flg[spec]))
 
 # Move to 1/ units
         for spec in self.cnt.keys():
@@ -333,14 +339,14 @@ class DPSD:
             logger.error('NSP shotfile for #%d exists already' %self.nshot)
             return
 
-        nt = len(self.time)
+        nt = len(self.time_cnt)
         sfh = sfhmod.SFHMOD(fin=fsfh)
         for lbl in ['time'] + sig1d:
             sfh.modtime(lbl, nt)
         sfh.write(fout=fsfh)
 
         if ww.Open(exp, diag, self.nshot):
-            status = ww.SetSignal('time', np.array(self.time, dtype=np.float32))
+            status = ww.SetSignal('time', np.array(self.time_cnt, dtype=np.float32))
             for lbl in sig1d:
                 print('Writing signal %s' %lbl)
                 status = ww.SetSignal(lbl, np.array(self.cnt[lbl], dtype=np.float32))

@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<main>
+  <Shots>34571</Shots>
+  <BaselineEnd>0</BaselineEnd>
+  <BaselineStart>7</BaselineStart>
+  <DDlower>28</DDlower>
+  <DDupper>340</DDupper>
+  <DTlower>500</DTlower>
+  <DTupper>4095</DTupper>
+  <Front>6</Front>
+  <LEDFront>6</LEDFront>
+  <LEDTail>6</LEDTail>
+  <LEDcorrection>true</LEDcorrection>
+  <LEDreference>3500</LEDreference>
+  <LEDxmax>5000</LEDxmax>
+  <LEDxmin>2600</LEDxmin>
+  <LEDymax>350</LEDymax>
+  <LEDymin>85</LEDymin>
+  <LineChange>350</LineChange>
+  <LongGate>14</LongGate>
+  <Marker>49000</Marker>
+  <MaxDifference>20</MaxDifference>
+  <Offset>560</Offset>
+  <HAfile> </HAfile>
+  <PeakAlgorythm>3</PeakAlgorythm>
+  <SaturationHigh>8190</SaturationHigh>
+  <SaturationLow>-100</SaturationLow>
+  <ShortGate>3</ShortGate>
+  <Slope1>0.15</Slope1>
+  <Slope2>0.023</Slope2>
+  <SubtBaseline>true</SubtBaseline>
+  <TBeg>0</TBeg>
+  <TEnd>20</TEnd>
+  <Tail>6</Tail>
+  <Threshold>10</Threshold>
+  <TimeBin>0.001</TimeBin>
+  <LEDdt>0.01</LEDdt>
+  <ToFWindowLength>50</ToFWindowLength>
+  <WindowLength>120</WindowLength>
+  <PH_nChannels>4096</PH_nChannels>
+  <PS_nChannels>1024</PS_nChannels>
+  <SFwrite>false</SFwrite>
+</main>

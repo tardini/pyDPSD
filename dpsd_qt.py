@@ -17,7 +17,7 @@ except:
     qt5 = False
 
 import numpy as np
-import dixm, dpsd, plot_dpsd
+import dixm, dpsd, plot_dpsd, plot_pulses
 try:
     import aug_sfutils as sf
 except:
@@ -79,14 +79,17 @@ class DPSD(QMainWindow):
 
         runAction  = QAction('&Run'     , fileMenu)
         plotAction = QAction('&Plot'    , fileMenu)
+        ppulAction = QAction('&Pulse analysis', fileMenu)
         wsfAction  = QAction('&Write SF', fileMenu)
         exitAction = QAction('&Exit'    , fileMenu)
         runAction.triggered.connect(self.run)
         plotAction.triggered.connect(self.plot)
+        ppulAction.triggered.connect(self.plot_pulses)
         wsfAction.triggered.connect(self.write_sf)
         exitAction.triggered.connect(sys.exit)
         fileMenu.addAction(runAction)
         fileMenu.addAction(plotAction)
+        fileMenu.addAction(ppulAction)
         fileMenu.addAction(wsfAction)
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
@@ -105,10 +108,10 @@ class DPSD(QMainWindow):
         header_grid.addWidget(menubar, 0, 0, 1, 10)
 
 # Icons
-        dum_lbl  = QLabel(600*' ')
-        fmap = {'play': self.run, 'plot': self.plot, \
+        dum_lbl  = QLabel(200*' ')
+        fmap = {'exec': self.run, 'plot': self.plot, \
             'save': self.write_sf, 'exit': sys.exit}
-        for jpos, lbl in enumerate(['play', 'exit', 'plot', 'save']):
+        for jpos, lbl in enumerate(['exec', 'exit', 'plot', 'save']):
             but = QPushButton()
             but.setIcon(QIcon('%s/%s.gif' %(dpsd_dir, lbl)))
             but.setIconSize(QSize(ybar, ybar))
@@ -253,6 +256,16 @@ class DPSD(QMainWindow):
         self.wid.addPlot('Window length distribution', fig5)
 
         self.wid.show()
+
+ 
+    def plot_pulses(self):
+
+        if not hasattr(self, 'dp'):
+            logger.error('Run code before plotting')
+            return
+
+        self.pul = plot_pulses.plotWindow(self.dp)
+        self.pul.show()
  
 
     def write_sf(self):
