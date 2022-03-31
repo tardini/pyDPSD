@@ -3,15 +3,15 @@ import matplotlib
 import numpy as np
 
 try:
-    from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QGridLayout, QPushButton, QLabel
+    from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QGridLayout, QPushButton, QLabel, QProgressBar, QSlider
     from PyQt5.QtGui import QPixmap, QIcon
-    from PyQt5.QtCore import QRect, QSize
+    from PyQt5.QtCore import Qt, QRect, QSize
     matplotlib.use('Qt5Agg')
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 except:
-    from PyQt4.QtGui import QPixmap, QIcon, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QPushButton, QLabel
-    from PyQt4.QtCore import QRect, QSize
+    from PyQt4.QtGui import Qt, QPixmap, QIcon, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QPushButton, QLabel, QProgressBar, QSLider
+    from PyQt4.QtCore import Qt, QRect, QSize
     matplotlib.use('Qt4Agg')
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
@@ -42,6 +42,11 @@ class plotWindow(QWidget):
             super(QWidget, self).__init__()
         xwin = 900
         ywin = 640
+        self.timeout = 1.e-10
+        xicon = 40
+        yicon = 50
+        ybar = 20
+
         self.setGeometry(QRect(80, 30, xwin, ywin))
 
         self.setWindowTitle('DPSD output')
@@ -53,12 +58,16 @@ class plotWindow(QWidget):
         self.canvas = FigureCanvas(self.fig_pul)
         new_toolbar = NavigationToolbar(self.canvas, self)
         tbar = QWidget(self)
-        tbar_grid = QGridLayout(tbar) 
+        tbar_grid = QGridLayout(tbar)
+        slider_layout = QVBoxLayout()
+        self.progress = QLabel('0%')
+        self.progress.setAlignment(Qt.AlignCenter)
+        self.progress.setFixedHeight(ybar)
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.sliderReleased.connect(self.get_slvalue)
+        slider_layout.addWidget(self.progress)
+        slider_layout.addWidget(self.slider)
 
-        self.timeout = 1.e-10
-
-        xicon = 40
-        yicon = 50
         tbar.setFixedHeight(yicon)
 
 # Icons
@@ -76,6 +85,7 @@ class plotWindow(QWidget):
         tbar_grid.addWidget(dum_lbl, 0, jpos+1)
 
         layout.addWidget(self.canvas)
+        layout.addLayout(slider_layout)
         layout.addWidget(tbar)
         layout.addWidget(new_toolbar)
 
@@ -83,6 +93,7 @@ class plotWindow(QWidget):
         self.ax = {}
         self.line = {}
         self.nt, self.xlen = self.dp.pulses.shape
+        self.slider.setMaximum(self.nt)
         for j in range(4):
             self.ax[j] = self.fig_pul.add_subplot(2, 2, j + 1)
             self.ax[j].set_xlim([0, self.xlen])
@@ -131,8 +142,15 @@ class plotWindow(QWidget):
         jplot = self.dp.event_type[self.jt]
         if jplot < 0:
             return
+        self.progress.setText('%d%%' %((self.jt*100)//self.nt))
+        self.slider.setValue(self.jt)
         pulse = self.dp.pulses[self.jt]
         self.line[jplot].set_ydata(pulse)
         self.ax[jplot].set_ylim([0, np.max(pulse)])
         self.ftext.set_text('Time=%6.4f' %self.dp.time[self.jt])
         self.canvas.draw()
+
+    def get_slvalue(self):
+        self.jt = self.slider.value()
+        self.update_plot()
+        self.pause()
