@@ -49,7 +49,7 @@ class plotWindow(QWidget):
 
         self.setGeometry(QRect(80, 30, xwin, ywin))
 
-        self.setWindowTitle('DPSD output')
+        self.setWindowTitle('DPSD pulse analysis')
 
         layout = QVBoxLayout()
         self.setLayout(layout)

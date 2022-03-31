@@ -45,7 +45,7 @@ class DPSD(QMainWindow):
 
     def __init__(self):
 
-        if qt5:
+        if sys.version_info[0] == 3:
             super().__init__()
         else:
             super(QMainWindow, self).__init__()
@@ -90,7 +90,8 @@ class DPSD(QMainWindow):
         fileMenu.addAction(runAction)
         fileMenu.addAction(plotAction)
         fileMenu.addAction(ppulAction)
-        fileMenu.addAction(wsfAction)
+        if 'aug_sfutils' in sys.modules:
+            fileMenu.addAction(wsfAction)
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
 
@@ -111,12 +112,21 @@ class DPSD(QMainWindow):
         dum_lbl  = QLabel(200*' ')
         fmap = {'exec': self.run, 'plot': self.plot, \
             'save': self.write_sf, 'exit': sys.exit}
-        for jpos, lbl in enumerate(['exec', 'exit', 'plot', 'save']):
+        for jpos, lbl in enumerate(['exec', 'exit', 'plot']):
             but = QPushButton()
             but.setIcon(QIcon('%s/%s.gif' %(dpsd_dir, lbl)))
             but.setIconSize(QSize(ybar, ybar))
             but.clicked.connect(fmap[lbl])
             tbar_grid.addWidget(but, 0, jpos)
+        jpos += 1
+        if 'aug_sfutils' in sys.modules:
+            lbl = 'save'
+            but = QPushButton()
+            but.setIcon(QIcon('%s/%s.gif' %(dpsd_dir, lbl)))
+            but.setIconSize(QSize(ybar, ybar))
+            but.clicked.connect(fmap[lbl])
+            tbar_grid.addWidget(but, 0, jpos)
+            jpos += 1
         tbar_grid.addWidget(dum_lbl,  0, 4, 1, 10)
 
 # User options
@@ -161,7 +171,8 @@ class DPSD(QMainWindow):
         for key, lbl in cb_d.items():
             jrow += 1
             self.gui[key] = QCheckBox(lbl)
-            entry_grid.addWidget(self.gui[key], jrow, 0, 1, 2)
+            if key != 'SFwrite' or 'aug_sfutils' in sys.modules:
+                entry_grid.addWidget(self.gui[key], jrow, 0, 1, 2)
             if setup_en_d[key].lower().strip() == 'true':
                 self.gui[key].setChecked(True)
 

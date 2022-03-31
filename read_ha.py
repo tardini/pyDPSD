@@ -1,4 +1,4 @@
-import logging
+import os, logging
 import numpy as np
 import numba as nb
 
@@ -25,8 +25,12 @@ class READ_HA:
 
     def __init__(self, fin, min_winlen=0, max_winlen=None):
 
-
+        self.status = True
         logger.info('Reading binary %s', fin)
+        if not os.path.isfile(fin):
+            logger.error('File %s not found', fin)
+            self.status = False
+            return
         data = np.fromfile(fin, dtype=np.uint16)
 
         logger.info('Getting t_diff and win_len')

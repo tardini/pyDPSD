@@ -29,7 +29,7 @@ class plotWindow(QWidget):
     def __init__(self):
 
         print(matplotlib.rcParams['backend'])
-        if matplotlib.rcParams['backend'] == 'Qt5Agg':
+        if sys.version_info[0] == 3:
             super().__init__()
         else:
             super(QWidget, self).__init__()
