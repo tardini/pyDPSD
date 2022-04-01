@@ -28,7 +28,6 @@ class plotWindow(QWidget):
 
     def __init__(self):
 
-        print(matplotlib.rcParams['backend'])
         if sys.version_info[0] == 3:
             super().__init__()
         else:
@@ -47,7 +46,6 @@ class plotWindow(QWidget):
 
         new_canvas = FigureCanvas(figure)
         new_toolbar = NavigationToolbar(new_canvas, new_tab)
-#        new_canvas.mpl_connect('button_press_event', fconf.on_click)
         layout.addWidget(new_canvas)
         layout.addWidget(new_toolbar)
         self.tabs.addTab(new_tab, title)

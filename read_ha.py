@@ -38,7 +38,8 @@ class READ_HA:
         (boundaries, ) = np.where( (data[:-3] >= 0) & (data[:-3] < 3) & \
             (data[2:-1] < 3) & (data[2:-1] >= 0) & (data1[1:-2] == data[3:]) )
 
-        tdiff = data[boundaries + 3] + data[boundaries]*32768
+        data32 = data.astype(np.uint32)
+        tdiff = data32[boundaries + 3] + data32[boundaries]*32768
 
         self.boundaries = np.append(boundaries, len(data)) # Retain final pulse too, unlike *.bin
         winlen = np.diff(self.boundaries) - 4
@@ -73,78 +74,3 @@ class READ_HA:
         self.t_events = 1e-8*(np.cumsum(tdiff, dtype=np.float32))[ind_ok]
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
         logger.debug('%d', len(self.pulses))
-
-
-if __name__ == '__main__':
-
-    import matplotlib.pylab as plt
-
-    nshot = 40490
-    nshot = 40525
-
-    fin = 'HA_%d.dat' %nshot
-    ha = READ_HA(fin)
-
-    tfile = '%dt.bin' %nshot
-    lfile = '%dl.bin' %nshot
-    dfile = '%d.bin'  %nshot
-
-    logger.info('Reading bin files')
-    tdiff  = np.fromfile(tfile, dtype = np.uint32)
-    winlen = np.fromfile(lfile, dtype = np.uint16)
-    data   = np.fromfile(dfile, dtype = np.int16)
-    logger.info('Done bin files')
-
-    print('Tdiff')
-    print(len(ha.tdiff), len(tdiff))
-    if len(ha.tdiff) == len(tdiff):
-        print(np.max(np.abs(ha.tdiff - tdiff)))
-
-    print('Winlen')
-    print(len(ha.winlen), len(winlen))
-    if len(ha.winlen) == len(winlen) + 1:
-        print(np.max(np.abs(ha.winlen[:-1] - winlen)))
-
-    print('Data')
-
-    pos = 0
-
-    pulse_ha_test1 = []
-    pulse_ha_test2 = []
-    pulse_test1 = []
-    pulse_test2 = []
-    for jpul, pulseha in enumerate(ha.pulses):
-        if jpul == len(winlen):
-            break
-        pulse = data[pos: pos + winlen[jpul]]
-        pos += winlen[jpul]
-        if len(pulseha) != len(pulse):
-            pulse_ha_test1.append(pulseha)
-            pulse_test1.append(pulse)
-        elif np.max(np.abs(pulseha - pulse)) > 0:
-            pulse_ha_test2.append(pulseha)
-            pulse_test2.append(pulse)
-
-    print(len(pulse_ha_test1), len(pulse_ha_test2), len(ha.pulses))
-    nplot = 50
-
-    plt.figure(1, (14., 6.4))
-    plt.subplot(2, 2, 1)
-    for pulseha in pulse_ha_test1[:nplot]:
-        plt.plot(pulseha)
-    plt.subplot(2, 2, 2)
-    for pulse in pulse_test1[:nplot]:
-        plt.plot(pulse)
-    plt.subplot(2, 2, 3)
-    for pulseha in pulse_ha_test2[:nplot]:
-        plt.plot(pulseha)
-    plt.subplot(2, 2, 4)
-    for pulse in pulse_test2[:nplot]:
-        plt.plot(pulse)
-    plt.show()
-
-    
-#    data = np.fromfile(fin, dtype=np.uint16)
-#    print(data[    : 1000])
-#    print(data[1000: 2000])
-#    print(data[2000: 3000])

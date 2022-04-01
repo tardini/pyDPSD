@@ -10,7 +10,7 @@ try:
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 except:
-    from PyQt4.QtGui import Qt, QPixmap, QIcon, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QPushButton, QLabel, QProgressBar, QSLider
+    from PyQt4.QtGui import QPixmap, QIcon, QWidget, QTabWidget, QVBoxLayout, QGridLayout, QPushButton, QLabel, QProgressBar, QSlider
     from PyQt4.QtCore import Qt, QRect, QSize
     matplotlib.use('Qt4Agg')
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
