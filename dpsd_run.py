@@ -134,7 +134,7 @@ class DPSD:
             self.HAfile = HAfile
             self.run(HAfile, t_ranges=t_ranges)
         else:
-            n_shots = np.atleast_1d(eval(dic_in['Shots']))
+            n_shots = np.atleast_1d(eval(str(dic_in['Shots'])))
             for nshot in n_shots:
                 logger.info(nshot)
                 self.nshot = int(nshot)
