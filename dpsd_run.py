@@ -142,17 +142,17 @@ class DPSD:
                 filepath = '/afs/ipp/augd/rawfiles/NSP/%d/%d' %(shot100, self.nshot)
                 HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
                 self.HAfile = HAfile
-                self.run(HAfile, t_ranges=t_ranges)
+                self.run(HAfile, t_ranges=t_ranges, check_md5=True)
 
 
-    def run(self, HAfile, t_ranges=None):
+    def run(self, HAfile, t_ranges=None, check_md5=False):
 
         nxCh = self.d_int['PH_nChannels']
         nyCh = self.d_int['PS_nChannels']
         dxCh = np.float32(nxCh)/np.float32(self.d_int['Marker'])
 
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
-        ha = read_ha.READ_HA(HAfile, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
+        ha = read_ha.READ_HA(HAfile, check_md5=check_md5, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
         if not ha.status:
             return
 

@@ -23,14 +23,20 @@ def raw2pulse(max_winlen, win_start, pulse_len, rawdata):
 class READ_HA:
 
 
-    def __init__(self, fin, min_winlen=0, max_winlen=None):
+    def __init__(self, fin, check_md5=False, min_winlen=0, max_winlen=None):
 
         self.status = True
         logger.info('Reading binary %s', fin)
+        fmd5 = fin + '.md5'
         if not os.path.isfile(fin):
             logger.error('File %s not found', fin)
             self.status = False
             return
+        if check_md5:
+            if not os.path.isfile(fmd5): # ensures integrity of fin
+                logger.error('File %s not found', fmd5)
+                self.status = False
+                return
         data = np.fromfile(fin, dtype=np.uint16)
 
         logger.info('Getting t_diff and win_len')
