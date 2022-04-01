@@ -4,3 +4,6 @@ of scintillation detectors.
 Any python >= 2
 
 Requires numba, pyqt (numpy, matplotlib)
+
+Run with the command
+    pyDPSD/dpsd.py

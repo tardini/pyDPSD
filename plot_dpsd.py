@@ -61,8 +61,7 @@ def fig_pha(dpsd, color='#c00000'):
     nbins = [dpsd.d_int['PH_nChannels'], dpsd.d_int['PS_nChannels']]
     ranges = [[-0.5, nbins[0]+0.5], [-0.5, nbins[1]+0.5]]
     hpha, xedges, yedges = np.histogram2d(dpsd.PulseHeight, dpsd.PulseShape, bins=nbins, range=ranges)
-    hpha = np.rot90(hpha)
-    hpha = np.flipud(hpha)
+    hpha = np.flipud(np.rot90(hpha))
     Hmasked = np.ma.masked_where(hpha == 0, hpha) # Mask pixels with a value of zero
     plt.xlim([0, nbins[0]])
     plt.ylim([0, nbins[1]])
