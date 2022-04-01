@@ -157,6 +157,8 @@ class DPSD:
             return
 
         if t_ranges is None:
+            if self.d_flt['TEnd'] <= 0:
+                self.d_flt['TEnd'] = ha.t_events[-1] # Take all time events
             (tind, ) = np.where((ha.t_events >= self.d_flt['TBeg']) & (ha.t_events <= self.d_flt['TEnd']))
             self.dt = self.d_flt['TEnd'] - self.d_flt['TBeg']
         else: # Force time ranges (make sure they don't overlap!)
