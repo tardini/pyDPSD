@@ -54,7 +54,7 @@ class plotWindow(QWidget):
 def fig_pha(dpsd, color='#c00000'):
 
     fig_pha = plt.figure(figsize=(12., 6.3), dpi=100)
-    fig_pha.subplots_adjust(left=0.05, bottom=0.07, right=0.98, top=0.94, hspace=0, wspace=0.4)
+    fig_pha.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.94, hspace=0, wspace=0.4)
     if hasattr(dpsd, 'nshot'):
         fig_pha.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
@@ -65,7 +65,7 @@ def fig_pha(dpsd, color='#c00000'):
     hpha = np.flipud(hpha)
     Hmasked = np.ma.masked_where(hpha == 0, hpha) # Mask pixels with a value of zero
     plt.xlim([0, nbins[0]])
-#    plt.ylim([0, nbins[1]])
+    plt.ylim([0, nbins[1]])
     plt.pcolormesh(xedges, yedges, np.log10(Hmasked))
     cbar = plt.colorbar()
 
@@ -87,6 +87,8 @@ def fig_pha(dpsd, color='#c00000'):
     height = dpsd.d_int['LEDymax'] - dpsd.d_int['LEDymin']
     led_box = Rectangle(xy, width, height, color='b', fill=False)
     plt.gca().add_patch(led_box)
+    plt.xlabel('Pulse Height')
+    plt.ylabel('Pulse Shape')
 
     return fig_pha
 
@@ -95,7 +97,7 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
 
     fig_phs = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
-    fig_phs.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
+    fig_phs.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     fig_phs.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     ymax = 0
@@ -104,6 +106,8 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
         ymax = max(ymax, np.max(dpsd.phs[spec][1:]))
     plt.xlim([0, dpsd.d_int['PH_nChannels']])
     plt.ylim([0, ymax])
+    plt.xlabel('Pulse Height')
+    plt.ylabel('Occurrences')
     plt.legend()
 
     return fig_phs
@@ -113,7 +117,7 @@ def fig_cnt(dpsd, color='#c00000', ymax=2, titles=None):
 
     fig_cnt = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
-    fig_cnt.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
+    fig_cnt.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     if hasattr(dpsd, 'nshot'):
         fig_cnt.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
@@ -123,6 +127,8 @@ def fig_cnt(dpsd, color='#c00000', ymax=2, titles=None):
         ymax = max(ymax, np.max(dpsd.cnt[spec]))
     plt.xlim([dpsd.time_cnt[0], dpsd.time_cnt[-1]])
     plt.ylim([0, ymax])
+    plt.xlabel('Time [s]')
+    plt.ylabel('Count rate [1/s]')
     plt.legend()
 
     return fig_cnt
@@ -132,14 +138,15 @@ def fig_pmg(dpsd):
 
     fig_pmg = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
-    fig_pmg.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
+    fig_pmg.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     if hasattr(dpsd, 'nshot'):
         fig_pmg.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     plt.plot(dpsd.time_led, dpsd.pmgain/float(dpsd.d_int['LEDreference']), 'r-')
     plt.xlim([dpsd.time_led[0], dpsd.time_led[-1]])
     plt.ylim([0, 1.5])
-
+    plt.xlabel('Time [s]')
+    plt.ylabel('Photomultiplier gain')
     return fig_pmg
 
 
@@ -147,7 +154,7 @@ def fig_win(dpsd):
 
     fig_win = plt.figure(figsize=(8.0, 6.3), dpi=100)
 
-    fig_win.subplots_adjust(left=0.05, bottom=0.08, right=0.98, top=0.92, hspace=0, wspace=0.28)
+    fig_win.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     if hasattr(dpsd, 'nshot'):
         fig_win.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
@@ -155,5 +162,6 @@ def fig_win(dpsd):
     win_max = np.max(dpsd.winlen)
     plt.hist(dpsd.winlen, bins=win_max)
     plt.xlim([win_min, win_max])
-
+    plt.xlabel('Window length [#samples]')
+    plt.ylabel('Occurrences')
     return fig_win

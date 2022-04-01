@@ -1,0 +1,6 @@
+python code for Digital Pulse Shape Discimination
+of scintillation detectors.
+
+Any python >= 2
+
+Requires numba, pyqt (numpy, matplotlib)
