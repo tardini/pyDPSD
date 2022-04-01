@@ -40,4 +40,5 @@
   <PH_nChannels>4096</PH_nChannels>
   <PS_nChannels>1024</PS_nChannels>
   <SFwrite>false</SFwrite>
+  <SFexp>git</SFexp>
 </main>

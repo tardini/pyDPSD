@@ -7,13 +7,13 @@ __date__    = '29.03.2022'
 import os, sys, logging
 
 try:
-    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog
+    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup
     from PyQt5.QtGui import QPixmap, QIcon
     from PyQt5.QtCore import Qt, QRect, QSize
     qt5 = True
 except:
     from PyQt4.QtCore import Qt, QRect, QSize
-    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog
+    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup
     qt5 = False
 
 import numpy as np
@@ -137,6 +137,8 @@ class DPSD(QMainWindow):
 
 # Entry widgets
         cb_d = {'SubtBaseline': 'Subtract baseline', 'LEDcorrection': 'LED correction', 'SFwrite': 'Write shotfiles'}
+        self.rblists = {'SFexp':['AUGD', os.getenv('USER')]}
+
         jcol = 0
         jrow = 0
         key = 'HAfile'
@@ -155,6 +157,8 @@ class DPSD(QMainWindow):
                 continue
             if key in cb_d.keys():
                 continue
+            if key in self.rblists.keys():
+                continue
             label = QLabel(key)
             self.gui[key] = QLineEdit(val)
             self.gui[key].setFixedWidth(90)
@@ -168,13 +172,31 @@ class DPSD(QMainWindow):
 # Checkbutton
 
         jrow = row_end
-        for key, lbl in cb_d.items():
+        for key in ['SubtBaseline', 'LEDcorrection', 'SFwrite']:
+            lbl = cb_d[key]
             jrow += 1
             self.gui[key] = QCheckBox(lbl)
             if key != 'SFwrite' or 'aug_sfutils' in sys.modules:
                 entry_grid.addWidget(self.gui[key], jrow, 0, 1, 2)
             if setup_en_d[key].lower().strip() == 'true':
                 self.gui[key].setChecked(True)
+
+# Radiobutton
+        if 'aug_sfutils' in sys.modules:
+            jrow += 1
+            key = 'SFexp'
+            rblist = self.rblists[key]
+            self.gui[key] = QButtonGroup(self)
+            entry_grid.addWidget(QLabel(key), jrow, 0)
+            for jcol, val in enumerate(rblist):
+                but = QRadioButton(val)
+                if jcol == 0:
+                    but.setChecked(True)
+                if setup_en_d[key].lower() == val.lower():
+                    but.setChecked(True)
+                entry_grid.addWidget(but, jrow, jcol+1)
+                self.gui[key].addButton(but)
+                self.gui[key].setId(but, jcol)
 
         self.setStyleSheet("QLabel { width: 4 }")
         self.setStyleSheet("QLineEdit { width: 4 }")
@@ -197,6 +219,9 @@ class DPSD(QMainWindow):
                 dpsd_dic[key] = val.text()
             elif isinstance(val, QCheckBox):
                 dpsd_dic[key] = val.isChecked()
+            elif isinstance(val, QButtonGroup):
+                bid = val.checkedId()
+                dpsd_dic[key] = self.rblists[key][bid]
 
         return dpsd_dic
 
@@ -206,14 +231,21 @@ class DPSD(QMainWindow):
         for key, val in xml_d.items():
             val = val.strip()
             val_low = val.lower()
-            if val_low == 'false':
-                self.gui[key].setChecked(False)
-            elif val_low == 'true':
-                self.gui[key].setChecked(True)
-            elif val_low == '':
-                self.gui[key].setText(' ')
-            else:
-                self.gui[key].setText(val)
+            widget = self.gui[key]
+            if isinstance(widget, QCheckBox):
+                if val_low == 'false':
+                    widget.setChecked(False)
+                elif val_low == 'true':
+                    widget.setChecked(True)
+            elif isinstance(widget, QButtonGroup):
+                for but in widget.buttons():
+                    if but.text().lower() == val_low:
+                        but.setChecked(True)
+            elif isinstance(widget, QLineEdit):          
+                if val_low == '':
+                    widget.setText(' ')
+                else:
+                    widget.setText(val)
 
 
     def load_xml(self):
@@ -245,6 +277,8 @@ class DPSD(QMainWindow):
         dpsd_dic = self.get_gui()
         self.dp = dpsd_run.DPSD(dpsd_dic)
         logger.info('Done calculation')
+        if dpsd_dic['SFwrite']:
+            self.write_sf()
 
 
     def plot(self):
@@ -282,7 +316,8 @@ class DPSD(QMainWindow):
     def write_sf(self):
 
         if hasattr(self, 'dp'):
-            self.dp.sfwrite(exp='git')
+            dic = self.get_gui()
+            self.dp.sfwrite(exp=dic['SFexp'])
         else:
             logger.error('Run DPSD first, then write Shotfile')
 
