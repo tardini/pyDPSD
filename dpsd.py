@@ -7,13 +7,13 @@ __date__    = '29.03.2022'
 import os, sys, logging
 
 try:
-    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup
+    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
     from PyQt5.QtGui import QPixmap, QIcon
     from PyQt5.QtCore import Qt, QRect, QSize
     qt5 = True
 except:
     from PyQt4.QtCore import Qt, QRect, QSize
-    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup
+    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
     qt5 = False
 
 import numpy as np
@@ -32,10 +32,28 @@ logger = logging.getLogger('DPSD_GUI')
 logger.addHandler(hnd)
 logger.setLevel(logging.INFO)
 
-frc = '#b0d0b0'  # Frame, Notebook, Checkbutton
-tbc = '#eaeaea'  # Toolbar, Button
-figc = '#70a0c0' # Figure
-colors  = 2*['#c00000', '#00c000', '#0000c0', '#b0b000', '#b000b0', '#00b0b0']
+lbl_d = {'SubtBaseline': 'Subtract baseline', \
+    'LEDcorrection': 'LED correction', 'SFwrite': 'Write shotfiles', \
+    'HAfile': 'HA*.dat file', 'SFexp': 'Shotfile exp', \
+    'TimeBin': 'Time step', 'TBeg': 'Start time', 'TEnd': 'End time', \
+    'ToFWindowLength': '#samples for analysis', \
+    'BaselineStart': 'Baseline start', 'BaselineEnd': 'Baseline end', \
+    'SaturationHigh': 'Saturation upper limit', \
+    'SaturationLow': 'Saturation lower limit', \
+    'LongGate': 'Long gate', 'ShortGate': 'Short gate', \
+    'MaxDifference': 'Maximum difference', \
+    'PH_nChannels': '#bins Pulse Height', 'PS_nChannels': '#bins Pulse Shape', \
+    'DDlower': 'Lower PH-limit for DD', 'DDupper': 'Upper PH-limit for DD', \
+    'DTlower': 'Lower PH-limit for DT', 'DTupper': 'Upper PH-limit for DT', \
+    'Slope1': 'Slope of 1st sep.line', 'Slope2': 'Slope of 2nd sep.line', \
+    'Offset': 'Offset of 1st sep.line', 'LineChange': 'Bin line1->line2', \
+    'LEDdt': 'LED time sampling', 'LEDfront': 'LED front', 'LEDtail': 'LED tail', \
+    'LEDreference': 'LED reference bin', \
+    'LEDxmin': 'Min PH bin for LED detection', \
+    'LEDxmax': 'Max PH bin for LED detection', \
+    'LEDymin': 'Min PS bin for LED detection', \
+    'LEDymax': 'Max PS bin for LED detection'
+    }
 
 dpsd_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -52,22 +70,53 @@ class DPSD(QMainWindow):
 
         self.setWindowTitle('DPSD')
 
-        xwin  = 450
-        ywin  = 660
+        xwin  = 470
         yhead = 44
-        ybar  = 50
+        yline = 30
+        ybar  = 48
+        ywin  = xwin + yhead + ybar
 
-        head = QWidget(self)
-        tbar = QWidget(self)
-        body = QWidget(self)
-        head.setGeometry(QRect(0,     0, xwin, yhead))
-        tbar.setGeometry(QRect(0, yhead, xwin, ybar))
-        body.setGeometry(QRect(0, yhead+ybar, xwin, ywin-yhead-ybar))
-        header_grid = QGridLayout(head) 
-        tbar_grid   = QGridLayout(tbar) 
-        entry_grid  = QGridLayout(body)
+        qhead  = QWidget(self)
+        qbar   = QWidget(self)
+        qtabs  = QTabWidget(self)
+        qhead.setGeometry(QRect(0,     0, xwin, yhead))
+        qbar.setGeometry(QRect(0, yhead, xwin, ybar))
+        qtabs.setGeometry(QRect(0, yhead+ybar, xwin, ywin-yhead-ybar))
+        header_grid = QGridLayout(qhead) 
+        tbar_grid   = QGridLayout(qbar) 
 
+#-----
+# Tabs
+#-----
+
+        qinput = QWidget()
+        input_layout = QGridLayout()
+        qinput.setLayout(input_layout)
+        qtabs.addTab(qinput, 'I/O files')
+
+        qsetup = QWidget()
+        setup_layout = QGridLayout()
+        qsetup.setLayout(setup_layout)
+        qtabs.addTab(qsetup, 'Setup')
+
+        qpeak = QWidget()
+        peak_layout = QGridLayout()
+        qpeak.setLayout(peak_layout)
+        qtabs.addTab(qpeak, 'Peak detection')
+
+        qsep = QWidget()
+        sep_layout = QGridLayout()
+        qsep.setLayout(sep_layout)
+        qtabs.addTab(qsep, 'n-g separation')
+
+        qled = QWidget()
+        led_layout = QGridLayout()
+        qled.setLayout(led_layout)
+        qtabs.addTab(qled, 'LED correction')
+
+#--------
 # Menubar
+#--------
 
         menubar = self.menuBar()
         fileMenu = QMenu('&File', self)
@@ -78,7 +127,7 @@ class DPSD(QMainWindow):
         menubar.addMenu(helpMenu)
 
         runAction  = QAction('&Run'     , fileMenu)
-        plotAction = QAction('&Plot'    , fileMenu)
+        plotAction = QAction('&Plots'   , fileMenu)
         ppulAction = QAction('&Pulse analysis', fileMenu)
         wsfAction  = QAction('&Write SF', fileMenu)
         exitAction = QAction('&Exit'    , fileMenu)
@@ -131,72 +180,97 @@ class DPSD(QMainWindow):
 
 # User options
 
-        setup_en_d = xml.xml2dict('%s/xml/default.xml' %dpsd_dir)
+        self.setup_init = xml.xml2dict('%s/xml/default.xml' %dpsd_dir)
         self.gui = {}
         user = os.getenv('USER')
 
 # Entry widgets
-        cb_d = {'SubtBaseline': 'Subtract baseline', 'LEDcorrection': 'LED correction', 'SFwrite': 'Write shotfiles'}
+
         self.rblists = {'SFexp':['AUGD', os.getenv('USER')]}
 
-        jcol = 0
-        jrow = 0
-        key = 'HAfile'
-        self.gui[key] = QLineEdit(setup_en_d[key])
-        entry_grid.addWidget(QLabel(key), jrow, 0)
-        entry_grid.addWidget(self.gui[key], jrow, 1, 1, 3)
-        key = 'Shots'
-        self.gui[key] = QLineEdit(setup_en_d[key])
-        entry_grid.addWidget(QLabel(key), jrow+1, 0)
-        entry_grid.addWidget(self.gui[key], jrow+1, 1, 1, 3)
-        row_init = 2
-        row_end = 20
-        jrow += row_init
-        for key, val in setup_en_d.items():
-            if key in ('HAfile', 'Shots'):
-                continue
-            if key in cb_d.keys():
-                continue
-            if key in self.rblists.keys():
-                continue
-            label = QLabel(key)
-            self.gui[key] = QLineEdit(val)
-            self.gui[key].setFixedWidth(90)
-            if jrow == row_end:
-                jrow = row_init
-                jcol += 2
-            entry_grid.addWidget(label        , jrow, jcol)
-            entry_grid.addWidget(self.gui[key], jrow, jcol+1)
-            jrow += 1
+#------------
+# Input files
+#------------
 
 # Checkbutton
 
-        jrow = row_end
-        for key in ['SubtBaseline', 'LEDcorrection', 'SFwrite']:
-            lbl = cb_d[key]
-            jrow += 1
-            self.gui[key] = QCheckBox(lbl)
-            if key != 'SFwrite' or 'aug_sfutils' in sys.modules:
-                entry_grid.addWidget(self.gui[key], jrow, 0, 1, 2)
-            if setup_en_d[key].lower().strip() == 'true':
-                self.gui[key].setChecked(True)
+        jrow = 0
 
-# Radiobutton
+        key = 'HAfile'
+        lbl = QLabel(lbl_d[key])
+        self.gui[key] = QLineEdit(self.setup_init[key])
+        input_layout.addWidget(lbl, jrow, 0)
+        input_layout.addWidget(self.gui[key], jrow, 1, 1, 3)
+        jrow += 1
+
+        key = 'Shots'
+        lbl = QLabel(key)
+        self.gui[key] = QLineEdit(self.setup_init[key])
+        input_layout.addWidget(lbl, jrow, 0)
+        input_layout.addWidget(self.gui[key], jrow, 1, 1, 3)
+        jrow += 1
+
+        key = 'SFwrite'
         if 'aug_sfutils' in sys.modules:
+            lbl = lbl_d[key]
+            self.gui[key] = QCheckBox(lbl)
+            input_layout.addWidget(self.gui[key], jrow, 0, 1, 2)
+            if self.setup_init[key].lower().strip() == 'true':
+                self.gui[key].setChecked(True)
             jrow += 1
+# Radiobutton
+
             key = 'SFexp'
             rblist = self.rblists[key]
             self.gui[key] = QButtonGroup(self)
-            entry_grid.addWidget(QLabel(key), jrow, 0)
+            input_layout.addWidget(QLabel(lbl_d[key]), jrow, 0)
             for jcol, val in enumerate(rblist):
                 but = QRadioButton(val)
                 if jcol == 0:
                     but.setChecked(True)
-                if setup_en_d[key].lower() == val.lower():
+                if self.setup_init[key].lower() == val.lower():
                     but.setChecked(True)
-                entry_grid.addWidget(but, jrow, jcol+1)
+                input_layout.addWidget(but, jrow, jcol+1)
                 self.gui[key].addButton(but)
                 self.gui[key].setId(but, jcol)
+            jrow += 1
+
+        input_layout.setRowStretch(input_layout.rowCount(), 1)
+
+#------
+# Setup
+#------
+
+        entries = ['TimeBin', 'TBeg', 'TEnd', 'ToFWindowLength']
+        self.new_tab(setup_layout, entries)
+
+#-----
+# Peak
+#-----
+
+        cb = ['SubtBaseline']
+        entries = ['BaselineStart', 'BaselineEnd', 'Threshold', \
+            'Front', 'Tail', 'SaturationHigh', 'SaturationLow', \
+            'LongGate', 'ShortGate', 'MaxDifference']
+        self.new_tab(peak_layout, entries, checkbuts=cb)
+
+#-----------
+# Separation
+#-----------
+
+        entries = ['Marker', 'PH_nChannels', 'PS_nChannels', \
+            'DDlower', 'DDupper', 'DTlower', 'DTupper', \
+            'Slope1', 'Slope2', 'Offset', 'LineChange']
+        self.new_tab(sep_layout, entries)
+
+#---------------
+# LED correction
+#---------------
+
+        cb = ['LEDcorrection']
+        entries = ['LEDdt', 'LEDFront', 'LEDTail', 'LEDreference', \
+            'LEDxmin', 'LEDxmax', 'LEDymin', 'LEDymax']
+        self.new_tab(led_layout, entries, checkbuts=cb)
 
         self.setStyleSheet("QLabel { width: 4 }")
         self.setStyleSheet("QLineEdit { width: 4 }")
@@ -209,6 +283,36 @@ class DPSD(QMainWindow):
 
         mytext = 'Documentation at <a href="http://www.aug.ipp.mpg.de/~git/tot/index.html">TOT/TTH diagnostic homepage</a>'
         h = tkhyper.HyperlinkMessageBox("Help", mytext, "500x60")
+
+
+    def new_tab(self, layout, entries, checkbuts=[]):
+# Checkbutton
+
+        jrow = 0
+        for key in checkbuts:
+            lbl = lbl_d[key]
+            self.gui[key] = QCheckBox(lbl)
+            layout.addWidget(self.gui[key], jrow, 0, 1, 2)
+            if self.setup_init[key].lower().strip() == 'true':
+                self.gui[key].setChecked(True)
+            jrow += 1
+
+        for key in entries:
+            val = self.setup_init[key]
+            if key in lbl_d.keys():
+                lbl = lbl_d[key]
+            else:
+                lbl = key
+            qlbl = QLabel(lbl)
+            qlbl.setFixedWidth(200)
+            self.gui[key] = QLineEdit(val)
+            self.gui[key].setFixedWidth(90)
+            layout.addWidget(qlbl         , jrow, 0)
+            layout.addWidget(self.gui[key], jrow, 1)
+            jrow += 1
+
+        layout.setRowStretch(layout.rowCount(), 1)
+        layout.setColumnStretch(layout.columnCount(), 1)
 
 
     def get_gui(self):

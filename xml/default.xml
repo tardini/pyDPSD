@@ -22,7 +22,6 @@
   <MaxDifference>20</MaxDifference>
   <Offset>560</Offset>
   <HAfile> </HAfile>
-  <PeakAlgorythm>3</PeakAlgorythm>
   <SaturationHigh>8190</SaturationHigh>
   <SaturationLow>-100</SaturationLow>
   <ShortGate>3</ShortGate>
@@ -36,7 +35,6 @@
   <TimeBin>0.001</TimeBin>
   <LEDdt>0.01</LEDdt>
   <ToFWindowLength>50</ToFWindowLength>
-  <WindowLength>120</WindowLength>
   <PH_nChannels>4096</PH_nChannels>
   <PS_nChannels>1024</PS_nChannels>
   <SFwrite>false</SFwrite>
