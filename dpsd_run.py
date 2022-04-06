@@ -143,6 +143,9 @@ class DPSD:
                 HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
                 self.HAfile = HAfile
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
+                if 'SFwrite' in dic_in.keys():
+                    if dic_in['SFwrite']:
+                        self.sfwrite(exp=dic_in['SFexp'])
 
 
     def run(self, HAfile, t_ranges=None, check_md5=False):

@@ -381,9 +381,6 @@ class DPSD(QMainWindow):
         dpsd_dic = self.get_gui()
         self.dp = dpsd_run.DPSD(dpsd_dic)
         logger.info('Done calculation')
-        if 'SFwrite' in dpsd_dic.keys():
-            if dpsd_dic['SFwrite']:
-                self.write_sf()
 
 
     def plot(self):
