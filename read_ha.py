@@ -10,13 +10,94 @@ logger.addHandler(hnd)
 logger.setLevel(logging.INFO)
 
 
+def calc_shift(pulse0):
+
+    shift = 0
+    min_tens = 0.
+    for j in range(10):
+        pulse2 = np.stack((pulse0[j::2], pulse0[:len0-j:2])).T.ravel()
+        der2 = -np.diff(np.diff(pulse2))
+        tension = 0.
+        for x in der2:
+            tension += x
+        if tension < min_tens:
+            shift = j
+    logger.debug('Shift: %d', shift)
+    return shift
+
+
 @nb.njit
 def raw2pulse(max_winlen, win_start, pulse_len, rawdata):
 
     win_end = win_start + pulse_len
     pulses = np.zeros((win_start.shape[0], max_winlen))
+
+# Determine shift
+    pulse0 = rawdata[win_start[0]: win_end[0]]
+    min_tens = 1e8
+    pulse_odd  = pulse0[1::2]
+    pulse_even = pulse0[:-1:2]
+    len0 = len(pulse_odd)
+    for j in range(1, 5):
+        pulse2 = np.stack((pulse_even[j:], pulse_odd[:len0-j])).T.ravel()
+        der2 = np.diff(pulse2)
+        tension = 0.
+        for x in der2:
+            if x > 0:
+                tension += x
+            else:
+                tension -= x
+        if tension < min_tens:
+            shift = j
+            min_tens = tension
+
+    for j in range(5):
+        pulse2 = np.stack((pulse_odd[j:], pulse_even[:len0-j])).T.ravel()
+        der2 = np.diff(pulse2)
+        tension = 0.
+        for x in der2:
+            if x > 0:
+                tension += x
+            else:
+                tension -= x
+        if tension < min_tens:
+            shift = -j
+            min_tens = tension
+
     for jwin, jpos in enumerate(win_start):
-        pulses[jwin][: pulse_len[jwin]] = rawdata[jpos : win_end[jwin]]
+        pulse = rawdata[jpos : win_end[jwin]]
+        pulse_even = pulse[:-1:2]
+        pulse_odd  = pulse[1::2]
+        len0 = len(pulse_odd)
+        min_tens = 1e8
+        for j in range(1, 5):
+            pulse2 = np.stack((pulse_even[j:], pulse_odd[:len0-j])).T.ravel()
+            der2 = np.diff(pulse2)
+            tension = 0.
+            for x in der2:
+                if x > 0:
+                    tension += x
+                else:
+                    tension -= x
+            if tension < min_tens:
+                pulse_ok = pulse2
+                min_tens = tension
+
+        for j in range(5):
+            pulse2 = np.stack((pulse_odd[j:], pulse_even[:len0-j])).T.ravel()
+            der2 = np.diff(pulse2)
+            tension = 0.
+            for x in der2:
+                if x > 0:
+                    tension += x
+                else:
+                    tension -= x
+            if tension < min_tens:
+                pulse_ok = pulse2
+                min_tens = tension
+
+        len_pul = len(pulse_ok)
+        pulses[jwin][: len_pul] = pulse_ok
     return pulses
 
 
@@ -67,7 +148,7 @@ class READ_HA:
         data *= -1
 # Entry-inversion observed by Luca Giacomelli
         n_pulses = len(self.winlen)
-        self.rawdata = np.stack((data[1::2], data[::2])).T.ravel()
+
 
         if max_winlen is None:
             max_winlen = np.max(self.winlen)
@@ -75,7 +156,7 @@ class READ_HA:
         logger.info('Reading pulses')
         pulse_len = np.minimum(self.winlen, max_winlen)
 
-        self.pulses = raw2pulse(max_winlen, win_start, pulse_len, self.rawdata)
+        self.pulses = raw2pulse(max_winlen, win_start, pulse_len, data)
 
         self.t_events = 1e-8*(np.cumsum(tdiff, dtype=np.float32))[ind_ok]
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
