@@ -62,10 +62,10 @@ def fig_pha(dpsd, color='#c00000'):
     ranges = [[-0.5, nbins[0]+0.5], [-0.5, nbins[1]+0.5]]
     hpha, xedges, yedges = np.histogram2d(dpsd.PulseHeight, dpsd.PulseShape, bins=nbins, range=ranges)
     hpha = np.flipud(np.rot90(hpha))
-    Hmasked = np.ma.masked_where(hpha == 0, hpha) # Mask pixels with a value of zero
+    hpha[hpha == 0] = np.nan
     plt.xlim([0, nbins[0]])
     plt.ylim([0, nbins[1]])
-    plt.pcolormesh(xedges, yedges, np.log10(Hmasked), cmap=matplotlib.cm.jet)
+    plt.pcolormesh(xedges, yedges, np.log10(hpha), cmap=matplotlib.cm.jet)
     cbar = plt.colorbar()
 
     xknot = dpsd.d_int['LineChange']
