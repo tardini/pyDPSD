@@ -65,7 +65,7 @@ def fig_pha(dpsd, color='#c00000'):
     Hmasked = np.ma.masked_where(hpha == 0, hpha) # Mask pixels with a value of zero
     plt.xlim([0, nbins[0]])
     plt.ylim([0, nbins[1]])
-    plt.pcolormesh(xedges, yedges, np.log10(Hmasked))
+    plt.pcolormesh(xedges, yedges, np.log10(Hmasked), cmap=matplotlib.cm.jet)
     cbar = plt.colorbar()
 
     xknot = dpsd.d_int['LineChange']
