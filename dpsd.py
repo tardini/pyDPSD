@@ -159,9 +159,9 @@ class DPSD(QMainWindow):
 
 # Icons
         dum_lbl  = QLabel(200*' ')
-        fmap = {'exec': self.run, 'plot': self.plot, \
+        fmap = {'exec': self.run, 'plot': self.plot, 'pulse': self.plot_pulses, \
             'save': self.write_sf, 'exit': sys.exit}
-        for jpos, lbl in enumerate(['exec', 'exit', 'plot']):
+        for jpos, lbl in enumerate(['exec', 'exit', 'plot', 'pulse']):
             but = QPushButton()
             but.setIcon(QIcon('%s/%s.gif' %(dpsd_dir, lbl)))
             but.setIconSize(QSize(ybar, ybar))

@@ -41,7 +41,7 @@ class plotWindow(QWidget):
         else:
             super(QWidget, self).__init__()
         xwin = 900
-        ywin = 640
+        ywin = 710
         self.timeout = 1.e-10
         xicon = 40
         yicon = 50

@@ -32,7 +32,7 @@ class plotWindow(QWidget):
             super().__init__()
         else:
             super(QWidget, self).__init__()
-        self.setGeometry(QRect(80, 30, 1200, 710))
+        self.setGeometry(QRect(80, 30, 900, 710))
         self.tabs = QTabWidget(self)
 
         self.setWindowTitle('DPSD output')
@@ -53,7 +53,7 @@ class plotWindow(QWidget):
 
 def fig_pha(dpsd, color='#c00000'):
 
-    fig_pha = plt.figure(figsize=(12., 6.3), dpi=100)
+    fig_pha = plt.figure(figsize=(8., 6.3), dpi=100)
     fig_pha.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.94, hspace=0, wspace=0.4)
     if hasattr(dpsd, 'nshot'):
         fig_pha.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
