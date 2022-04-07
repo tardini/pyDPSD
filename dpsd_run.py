@@ -25,6 +25,41 @@ def slice_trapz(a, bnd_l, bnd_r):
 
 
 @nb.njit
+def led_correction(dtled, dxCh, led_ref, time, totalintegral, flg_led):
+
+    jled_old = 0
+    jtmark = 0
+    LEDsumm = 0
+    LEDamount = 0
+    LEDcoeff = 0
+    tled = ((time - time[0])/dtled).astype(np.int32)
+    n_pulses = len(time)
+    n_led = int((time[-1] - time[0])/dtled)
+    pulseheight = dxCh*totalintegral
+    pmgain = np.zeros(n_led, dtype=np.float32)
+
+    for jpul in range(n_pulses):
+        jled = tled[jpul]
+        if jled > jled_old:
+            if LEDamount > 0:
+                pmgain[jled] = dxCh*np.float32(LEDsumm)/np.float32(LEDamount)
+                if LEDsumm > 0:
+                    LEDcoeff = np.float32(led_ref)/pmgain[jled]
+            else:
+                print('Empty', time[jpul])
+            pulseheight[jtmark: jpul] *= LEDcoeff
+            jtmark = jpul
+            LEDsumm = 0
+            LEDamount = 0
+            LEDcoeff = 0
+        if flg_led[jpul]: # LED single pulse
+            LEDsumm += totalintegral[jpul]
+            LEDamount += 1
+        jled_old = jled
+
+    return pmgain, pulseheight
+
+@nb.njit
 def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, max_lg):
 
     n_pulses = maxpos.shape[0]
@@ -193,13 +228,6 @@ class DPSD:
         flg_sat   = np.zeros(n_pulses)
         self.flg_peaks = np.zeros(n_pulses)
 
-        self.pmgain = np.zeros(n_led, dtype=np.float32)
-
-        LEDsumm = 0
-        LEDaver = 0
-        LEDcoeff = 0
-        jtmark = 0
-
 # =========== 
 # Time loop
 # =========== 
@@ -260,29 +288,9 @@ class DPSD:
 
         logger.info('LED correction')
 
-        jtime_old = 0
-        jtmark = 0
-        LEDsumm = 0
-        LEDamount = 0
-        LEDcoeff = 0
-        tled = ((self.time - self.time[0])/self.d_flt['LEDdt']).astype(np.int32) - 1
-        for jpul in range(n_pulses):
-            jtime = tled[jpul]
-            if (jtime > jtime_old):
-                if LEDamount > 0:
-                    self.pmgain[jtime] = dxCh*np.float32(LEDsumm)/np.float32(LEDamount)
-                    if LEDsumm > 0:
-                        LEDcoeff = np.float32(self.d_int['LEDreference'])/self.pmgain[jtime]
-                self.TotalIntegral[jtmark: jpul] *= LEDcoeff
-                self.PulseHeight[jtmark: jpul] *= LEDcoeff
-                jtmark = jpul
-                LEDsumm = 0
-                LEDamount = 0
-                LEDcoeff = 0
-            if self.flg['led'][jpul]: # LED single pulse
-                LEDsumm += self.TotalIntegral[jpul]
-                LEDamount += 1
-            jtime_old = jtime
+        self.pmgain, self.PulseHeight = led_correction(self.d_flt['LEDdt'], dxCh, self.d_int['LEDreference'], self.time, self.TotalIntegral, self.flg['led'])
+
+        self.TotalIntegral = self.PulseHeight/dxCh
 
         flg_slope1 = (self.PulseHeight <= self.d_int['LineChange'])
         flg1n = (self.PulseShape <= self.d_flt['Offset'] + self.d_flt['Slope1']*self.PulseHeight)

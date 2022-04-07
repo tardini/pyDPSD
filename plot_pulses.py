@@ -103,7 +103,7 @@ class plotWindow(QWidget):
         self.ax[2].set_title('Pile-up')
         self.ax[3].set_title('LED')
 
-        self.ftext = self.fig_pul.text(0.5, 0.95, 'Time: %6.4f' %self.dp.time[0], ha='center')
+        self.ftext = self.fig_pul.text(0.5, 0.95, 'Time: %7.5f' %self.dp.time[0], ha='center')
 
         self.jt = 0
         self.stop = True
@@ -147,7 +147,7 @@ class plotWindow(QWidget):
         pulse = self.dp.pulses[self.jt]
         self.line[jplot].set_ydata(pulse)
         self.ax[jplot].set_ylim([0, np.max(pulse)])
-        self.ftext.set_text('Time=%6.4f' %self.dp.time[self.jt])
+        self.ftext.set_text('Time=%7.5f' %self.dp.time[self.jt])
         self.canvas.draw()
 
     def get_slvalue(self):

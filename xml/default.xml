@@ -12,8 +12,8 @@
   <LEDTail>6</LEDTail>
   <LEDcorrection>true</LEDcorrection>
   <LEDreference>3500</LEDreference>
-  <LEDxmax>5000</LEDxmax>
-  <LEDxmin>2600</LEDxmin>
+  <LEDxmax>10000</LEDxmax>
+  <LEDxmin>2000</LEDxmin>
   <LEDymax>350</LEDymax>
   <LEDymin>85</LEDymin>
   <LineChange>350</LineChange>
