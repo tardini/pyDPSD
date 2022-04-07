@@ -239,7 +239,8 @@ class DPSD:
         ind3 = np.where(self.LongIntegral > 0)[0]
 
         self.PulseHeight = dxCh*self.TotalIntegral
-        self.PulseShape = np.float32(nyCh)*self.ShortIntegral/self.LongIntegral
+        self.PulseShape = np.zeros(n_pulses, dtype=np.float32)
+        self.PulseShape[ind3] = np.float32(nyCh)*self.ShortIntegral[ind3]/self.LongIntegral[ind3]
 
 # LED evaluation
 
