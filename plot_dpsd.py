@@ -21,6 +21,7 @@ from matplotlib.patches import Rectangle
 fsize   = 8
 titsize = 10
 lblsize = 10
+fig_size = (8.2, 6.05)
 
 
 class plotWindow(QWidget):
@@ -32,9 +33,9 @@ class plotWindow(QWidget):
             super().__init__()
         else:
             super(QWidget, self).__init__()
-        self.setGeometry(QRect(80, 30, 900, 710))
+        self.setGeometry(QRect(80, 30, 850, 705))
         self.tabs = QTabWidget(self)
-
+        self.tabs.setStyleSheet("QTabBar::tab { width: 165 }")
         self.setWindowTitle('DPSD output')
 
 
@@ -53,7 +54,7 @@ class plotWindow(QWidget):
 
 def fig_pha(dpsd, color='#c00000'):
 
-    fig_pha = plt.figure(figsize=(8., 6.3), dpi=100)
+    fig_pha = plt.figure(figsize=fig_size, dpi=100)
     fig_pha.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.94, hspace=0, wspace=0.4)
     if hasattr(dpsd, 'nshot'):
         fig_pha.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
@@ -94,7 +95,7 @@ def fig_pha(dpsd, color='#c00000'):
 
 def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
 
-    fig_phs = plt.figure(figsize=(8.0, 6.3), dpi=100)
+    fig_phs = plt.figure(figsize=fig_size, dpi=100)
 
     fig_phs.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     fig_phs.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
@@ -114,7 +115,7 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
 
 def fig_cnt(dpsd, color='#c00000', ymax=2, titles=None):
 
-    fig_cnt = plt.figure(figsize=(8.0, 6.3), dpi=100)
+    fig_cnt = plt.figure(figsize=fig_size, dpi=100)
 
     fig_cnt.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     if hasattr(dpsd, 'nshot'):
@@ -135,7 +136,7 @@ def fig_cnt(dpsd, color='#c00000', ymax=2, titles=None):
 
 def fig_pmg(dpsd):
 
-    fig_pmg = plt.figure(figsize=(8.0, 6.3), dpi=100)
+    fig_pmg = plt.figure(figsize=fig_size, dpi=100)
 
     fig_pmg.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     if hasattr(dpsd, 'nshot'):
@@ -151,7 +152,7 @@ def fig_pmg(dpsd):
 
 def fig_win(dpsd):
 
-    fig_win = plt.figure(figsize=(8.0, 6.3), dpi=100)
+    fig_win = plt.figure(figsize=fig_size, dpi=100)
 
     fig_win.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
     if hasattr(dpsd, 'nshot'):

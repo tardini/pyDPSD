@@ -70,7 +70,7 @@ class DPSD(QMainWindow):
 
         self.setWindowTitle('DPSD')
 
-        xwin  = 470
+        xwin  = 603
         yhead = 44
         yline = 30
         ybar  = 48
@@ -82,6 +82,7 @@ class DPSD(QMainWindow):
         qhead.setGeometry(QRect(0,     0, xwin, yhead))
         qbar.setGeometry(QRect(0, yhead, xwin, ybar))
         qtabs.setGeometry(QRect(0, yhead+ybar, xwin, ywin-yhead-ybar))
+        qtabs.setStyleSheet("QTabBar::tab { width: 120 }")
         header_grid = QGridLayout(qhead) 
         tbar_grid   = QGridLayout(qbar) 
 
@@ -397,10 +398,10 @@ class DPSD(QMainWindow):
         fig5 = plot_dpsd.fig_win(self.dp)
 
         self.wid.addPlot('PH-PS separation'     , fig1)
-        self.wid.addPlot('Pulse Height spectrum', fig2)
+        self.wid.addPlot('Pulse Height spectra', fig2)
         self.wid.addPlot('Count rates'          , fig3)
         self.wid.addPlot('PM gain'              , fig4)
-        self.wid.addPlot('Window length distribution', fig5)
+        self.wid.addPlot('Window lengths', fig5)
 
         self.wid.show()
 

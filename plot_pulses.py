@@ -35,7 +35,6 @@ class plotWindow(QWidget):
 
         self.dp = dpsd
 
-        print(matplotlib.rcParams['backend'])
         if matplotlib.rcParams['backend'] == 'Qt5Agg':
             super().__init__()
         else:

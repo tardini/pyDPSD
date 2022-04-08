@@ -45,8 +45,6 @@ def led_correction(dtled, dxCh, led_ref, time, totalintegral, flg_led):
                 pmgain[jled] = dxCh*np.float32(LEDsumm)/np.float32(LEDamount)
                 if LEDsumm > 0:
                     LEDcoeff = np.float32(led_ref)/pmgain[jled]
-            else:
-                print('Empty', time[jpul])
             pulseheight[jtmark: jpul] *= LEDcoeff
             jtmark = jpul
             LEDsumm = 0
@@ -209,15 +207,14 @@ class DPSD:
                 (ind, ) = np.where((ha.t_events >= t_ran[0]) & (ha.t_events <= t_ran[1]))
                 tind = np.append(tind, ind)
                 self.dt += t_ran[1] - t_ran[0]
-            print(tind)
-            print(self.dt)
+
         self.time = ha.t_events[tind]
-        print('TBeg = %8.4f' %self.time[0]) 
-        print('TEnd = %8.4f' %self.time[-1]) 
+        logger.info('TBeg = %8.4f' %self.time[0]) 
+        logger.info('TEnd = %8.4f' %self.time[-1]) 
         n_pulses = len(self.time)
         n_timebins = int((self.time[-1] - self.time[0])/self.d_flt['TimeBin'])
         n_led = int((self.time[-1] - self.time[0])/self.d_flt['LEDdt'])
-        print('n_timebins = %d' %n_timebins)
+
         self.time_cnt = self.time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
         self.time_led = self.time[0] + self.d_flt['LEDdt']*(0.5 + np.arange(n_led))
 
@@ -234,7 +231,7 @@ class DPSD:
 
         logger.info('Starting time loop')
 
-        print('# pulses: %6d' % n_pulses)
+        logger.info('# pulses: %d' %n_pulses)
 
         maxpos = np.argmax(pulses, axis=1)
         pulse_max = np.max(pulses, axis=1)
@@ -364,30 +361,6 @@ class DPSD:
         if ww.Open(exp, diag, self.nshot):
             status = ww.SetSignal('time', np.array(self.time_cnt, dtype=np.float32))
             for lbl in sig1d:
-                print('Writing signal %s' %lbl)
+                logger.info('Writing signal %s' %lbl)
                 status = ww.SetSignal(lbl, np.array(self.cnt[lbl], dtype=np.float32))
             ww.Close()
-
-
-if __name__ == "__main__":
-
-    if len(sys.argv) > 1:
-        nshot = int(sys.argv[1])
-    else:
-        try:
-            nshot = int(raw_input('Enter a shot number:'))
-        except:
-            print('Not a number')
-
-    setup_en_d = dixm.DIX().xml2dict('/afs/ipp/home/g/git/DPSD/xml/default.xml')
-    setup_en_d['TBeg'] = 0.
-    setup_en_d['LEDdt'] = 0.01
-    setup_en_d['TimeBin'] = 0.003
-    setup_en_d['TEnd'] = 80.
-
-#    dps = DPSD(setup_en_d, nshot, exp='git')
-    dps = DPSD(setup_en_d, nshot, exp='AUGD')
-
-# plots
-
-    dps.plot()
