@@ -13,6 +13,7 @@ logger.addHandler(hnd)
 logger.setLevel(logging.DEBUG)
 
 sig1d = ['neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup']
+dpsd_dir = os.path.dirname(os.path.realpath(__file__))
 
 @nb.njit
 def slice_trapz(a, bnd_l, bnd_r):
@@ -340,7 +341,7 @@ class DPSD:
         self.cnt['gamma2'] = pup_frac*self.cnt['gamma1']
 
 
-    def sfwrite(self, fsfh='NSP00000.sfh', exp='AUGD'):
+    def sfwrite(self, fsfh='%s/NSP00000.sfh' %dpsd_dir, exp='AUGD'):
 
         import aug_sfutils as sf
         from aug_sfutils import sfhmod
@@ -358,9 +359,9 @@ class DPSD:
             sfh.modtime(lbl, nt)
         sfh.write(fout=fsfh)
 
+        os.chdir(dpsd_dir)
         if ww.Open(exp, diag, self.nshot):
             status = ww.SetSignal('time', np.array(self.time_cnt, dtype=np.float32))
             for lbl in sig1d:
-                logger.info('Writing signal %s' %lbl)
                 status = ww.SetSignal(lbl, np.array(self.cnt[lbl], dtype=np.float32))
             ww.Close()

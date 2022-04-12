@@ -212,18 +212,20 @@ class DPSD(QMainWindow):
         jrow += 1
 
         key = 'SFwrite'
+        lbl = lbl_d[key]
+        self.gui[key] = QCheckBox(lbl)
         if 'aug_sfutils' in sys.modules:
-            lbl = lbl_d[key]
-            self.gui[key] = QCheckBox(lbl)
             input_layout.addWidget(self.gui[key], jrow, 0, 1, 2)
             if self.setup_init[key].lower().strip() == 'true':
                 self.gui[key].setChecked(True)
             jrow += 1
+
 # Radiobutton
 
-            key = 'SFexp'
-            rblist = self.rblists[key]
-            self.gui[key] = QButtonGroup(self)
+        key = 'SFexp'
+        rblist = self.rblists[key]
+        self.gui[key] = QButtonGroup(self)
+        if 'aug_sfutils' in sys.modules:
             input_layout.addWidget(QLabel(lbl_d[key]), jrow, 0)
             for jcol, val in enumerate(rblist):
                 but = QRadioButton(val)
