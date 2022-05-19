@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-__author__  = 'Giovanni Tardini (Tel. 1898)'
+__author__  = 'Giovanni Tardini (Tel. +49 89 3299-1898)'
 __version__ = '0.0.1'
 __date__    = '29.03.2022'
 
-import os, sys, logging
+import os, sys, logging, webbrowser
 
 try:
     from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
@@ -24,6 +24,8 @@ except:
     pass
 
 xml = dixm.DIX()
+
+os.environ['BROWSER'] = '/usr/bin/firefox'
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 hnd = logging.StreamHandler()
@@ -67,8 +69,6 @@ class DPSD(QMainWindow):
             super().__init__()
         else:
             super(QMainWindow, self).__init__()
-
-        self.setWindowTitle('DPSD')
 
         xwin  = 603
         yhead = 44
@@ -152,7 +152,7 @@ class DPSD(QMainWindow):
         loadAction.triggered.connect(self.load_xml)
         saveAction.triggered.connect(self.save_xml)
 
-        aboutAction = QAction('&About', helpMenu)
+        aboutAction = QAction('&Web docu', helpMenu)
         aboutAction.triggered.connect(self.about)
         helpMenu.addAction(aboutAction)
 
@@ -177,7 +177,7 @@ class DPSD(QMainWindow):
             but.clicked.connect(fmap[lbl])
             tbar_grid.addWidget(but, 0, jpos)
             jpos += 1
-        tbar_grid.addWidget(dum_lbl,  0, 4, 1, 10)
+        tbar_grid.addWidget(dum_lbl,  0, jpos, 1, 10)
 
 # User options
 
@@ -284,8 +284,7 @@ class DPSD(QMainWindow):
 
     def about(self):
 
-        mytext = 'Documentation at <a href="http://www.aug.ipp.mpg.de/~git/tot/index.html">TOT/TTH diagnostic homepage</a>'
-        h = tkhyper.HyperlinkMessageBox("Help", mytext, "500x60")
+        webbrowser.open('https://www.aug.ipp.mpg.de/~git/ne213/dpsd/index.html')
 
 
     def new_tab(self, layout, entries, checkbuts=[]):

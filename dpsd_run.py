@@ -330,7 +330,7 @@ class DPSD:
             self.phs[spec] = phs.astype(np.float32)/self.dt
             logger.info('%s %d', spec, np.sum(self.flg[spec]))
 
-# Move to 1/ units
+# Move to 1/s units
         for spec in self.cnt.keys():
             self.cnt[spec] /= self.d_flt['TimeBin']
 
