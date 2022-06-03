@@ -35,7 +35,8 @@ logger.addHandler(hnd)
 logger.setLevel(logging.INFO)
 
 lbl_d = {'SubtBaseline': 'Subtract baseline', \
-    'LEDcorrection': 'LED correction', 'SFwrite': 'Write shotfiles', \
+    'LEDcorrection': 'LED correction', \
+    'SFwrite': 'Write shotfiles', 'SFforce': 'Force SF write', \
     'HAfile': 'HA*.dat file', 'SFexp': 'Shotfile exp', \
     'TimeBin': 'Time step', 'TBeg': 'Start time', 'TEnd': 'End time', \
     'ToFWindowLength': '#samples for analysis', \
@@ -212,6 +213,15 @@ class DPSD(QMainWindow):
         jrow += 1
 
         key = 'SFwrite'
+        lbl = lbl_d[key]
+        self.gui[key] = QCheckBox(lbl)
+        if 'aug_sfutils' in sys.modules:
+            input_layout.addWidget(self.gui[key], jrow, 0, 1, 2)
+            if self.setup_init[key].lower().strip() == 'true':
+                self.gui[key].setChecked(True)
+            jrow += 1
+
+        key = 'SFforce'
         lbl = lbl_d[key]
         self.gui[key] = QCheckBox(lbl)
         if 'aug_sfutils' in sys.modules:
@@ -421,7 +431,7 @@ class DPSD(QMainWindow):
 
         if hasattr(self, 'dp'):
             dic = self.get_gui()
-            self.dp.sfwrite(exp=dic['SFexp'])
+            self.dp.sfwrite(exp=dic['SFexp'], force=dic['SFforce'])
         else:
             logger.error('Run DPSD first, then write Shotfile')
 

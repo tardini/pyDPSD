@@ -179,7 +179,7 @@ class DPSD:
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
                 if 'SFwrite' in dic_in.keys():
                     if dic_in['SFwrite']:
-                        self.sfwrite(exp=dic_in['SFexp'])
+                        self.sfwrite(exp=dic_in['SFexp'], force=dic_in['SFforce'])
 
 
     def run(self, HAfile, t_ranges=None, check_md5=False):
@@ -341,25 +341,28 @@ class DPSD:
         self.cnt['gamma2'] = pup_frac*self.cnt['gamma1']
 
 
-    def sfwrite(self, fsfh='%s/NSP00000.sfh' %dpsd_dir, exp='AUGD'):
+    def sfwrite(self, fsfh='%s/NSP00000.sfh' %dpsd_dir, exp='AUGD', force=False):
 
         import aug_sfutils as sf
         from aug_sfutils import sfhmod
+
         ww = sf.WW()
 
         diag = 'NSP'
         nsp = sf.SFREAD('NSP', self.nshot, exp=exp)
-        if nsp.status:
+        if nsp.status and not force:
             logger.error('NSP shotfile for #%d exists already' %self.nshot)
             return
 
         nt = len(self.time_cnt)
-        sfh = sfhmod.SFHMOD(fin=fsfh)
+        ftemp = '%s/NSP00000.sfh.temp' %dpsd_dir
+        sfh = sfhmod.SFHMOD(fin=ftemp)
         for lbl in ['time'] + sig1d:
             sfh.modtime(lbl, nt)
         sfh.write(fout=fsfh)
 
         os.chdir(dpsd_dir)
+
         if ww.Open(exp, diag, self.nshot):
             status = ww.SetSignal('time', np.array(self.time_cnt, dtype=np.float32))
             for lbl in sig1d:
