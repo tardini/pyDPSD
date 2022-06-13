@@ -149,6 +149,7 @@ class DPSD:
 
     def __init__(self, dic_in, t_ranges=None):
 
+        self.status = True
         self.d_int = {}
         self.d_flt = {}
         int_list = ('BaselineStart', 'BaselineStart', 'BaselineEnd', \
@@ -178,7 +179,7 @@ class DPSD:
                 self.HAfile = HAfile
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
                 if 'SFwrite' in dic_in.keys():
-                    if dic_in['SFwrite']:
+                    if self.status and dic_in['SFwrite']:
                         self.sfwrite(exp=dic_in['SFexp'], force=dic_in['SFforce'])
 
 
@@ -191,6 +192,7 @@ class DPSD:
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
         ha = read_ha.READ_HA(HAfile, check_md5=check_md5, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
         if not ha.status:
+            self.status = False
             return
 
         if t_ranges is None:
