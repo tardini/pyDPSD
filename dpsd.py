@@ -431,7 +431,8 @@ class DPSD(QMainWindow):
 
         if hasattr(self, 'dp'):
             dic = self.get_gui()
-            self.dp.sfwrite(exp=dic['SFexp'], force=dic['SFforce'])
+            if self.dp.status:
+                self.dp.sfwrite(exp=dic['SFexp'], force=dic['SFforce'])
         else:
             logger.error('Run DPSD first, then write Shotfile')
 

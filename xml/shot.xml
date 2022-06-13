@@ -3,6 +3,7 @@
   <HAfile> </HAfile>
   <Shots>range(40582, 40585)</Shots>
   <SFwrite>true</SFwrite>
+  <SFforce>false</SFforce>
   <SFexp>AUGD</SFexp>
   <TimeBin>0.001</TimeBin>
   <TBeg>0</TBeg>

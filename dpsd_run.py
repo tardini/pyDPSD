@@ -178,6 +178,7 @@ class DPSD:
                 HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
                 self.HAfile = HAfile
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
+                print(self.HAfile, self.status, dic_in['SFwrite'], dic_in['SFforce'])
                 if 'SFwrite' in dic_in.keys():
                     if self.status and dic_in['SFwrite']:
                         self.sfwrite(exp=dic_in['SFexp'], force=dic_in['SFforce'])
@@ -191,6 +192,7 @@ class DPSD:
 
         min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
         ha = read_ha.READ_HA(HAfile, check_md5=check_md5, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
+        self.status = True
         if not ha.status:
             self.status = False
             return
