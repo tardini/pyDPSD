@@ -1,8 +1,28 @@
 import numpy as np
-import dpsd_run, dixm
+import dpsd_run, dicxml
 import matplotlib.pylab as plt
 
-setup_d = dixm.DIX().xml2dict('/afs/ipp/home/g/git/python/neutrons/dpsd/xml/default.xml')
+xml = dicxml.DIX()
+
+xml_d = xml.xml2dict('/afs/ipp/home/g/git/python/neutrons/dpsd/xml/default.xml')['main']
+setup_d = {}
+for xml_node in xml_d.values():
+    for key, val_d in xml_node.items():
+        if val_d['@type'] == 'str':
+            if '#text' in val_d.keys():
+                setup_d[key] = val_d['#text']
+            else:
+                setup_d[key] = ''
+        elif val_d['@type'] == 'bool':
+            if val_d['#text'].lower() == 'true':
+                setup_d[key] = True
+            else:
+                setup_d[key] = False
+        elif val_d['@type'] == 'int':
+            setup_d[key] = int(val_d['#text'])
+        elif val_d['@type'] == 'flt':
+            setup_d[key] = float(val_d['#text'])
+
 nshot = 29795
 setup_d['Shots'] = nshot
 
