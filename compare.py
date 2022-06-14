@@ -2,29 +2,12 @@ import numpy as np
 import dpsd_run, dicxml
 import matplotlib.pylab as plt
 
-xml = dicxml.DIX()
 
-xml_d = xml.xml2dict('/afs/ipp/home/g/git/python/neutrons/dpsd/xml/default.xml')['main']
-setup_d = {}
-for xml_node in xml_d.values():
-    for key, val_d in xml_node.items():
-        if val_d['@type'] == 'str':
-            if '#text' in val_d.keys():
-                setup_d[key] = val_d['#text']
-            else:
-                setup_d[key] = ''
-        elif val_d['@type'] == 'bool':
-            if val_d['#text'].lower() == 'true':
-                setup_d[key] = True
-            else:
-                setup_d[key] = False
-        elif val_d['@type'] == 'int':
-            setup_d[key] = int(val_d['#text'])
-        elif val_d['@type'] == 'flt':
-            setup_d[key] = float(val_d['#text'])
+xml_d = dicxml.xml2dict('/afs/ipp/home/g/git/python/neutrons/dpsd/xml/default.xml')['main']
+setup_d = dicxml.xml2val_dic(xml_d)
 
 nshot = 29795
-setup_d['Shots'] = nshot
+setup_d['io']['Shots'] = nshot
 
 #2nd harmonic
 

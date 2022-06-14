@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
 import sys, time, os, logging
-import dpsd_run, dixm
+import dpsd_run, dicxml
 from aug_sfutils import journal, getlastshot, SFREAD
-
-xml = dixm.DIX()
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 hnd = logging.StreamHandler()
@@ -21,7 +19,9 @@ while not firstshot:
         time.sleep(60)
 
 dpsd_dir = os.path.dirname(os.path.realpath(__file__))
-setup_d = xml.xml2dict('%s/xml/shot.xml' %dpsd_dir)
+xml_d = dicxml.xml2dict('%s/xml/shot.xml' %dpsd_dir)['main']
+setup_d = dicxml.xml2val_dic(xml_d)
+
 
 if journal.anyshot():
 
@@ -47,9 +47,9 @@ if journal.anyshot():
             if nsp.status:
                 logger.warning('NSP shotfile for shot %d exists already, writing no new shotfile' %nshot)
             else:
-                setup_d['Shots'] = nshot 
+                setup_d['io']['Shots'] = nshot 
                 dpsd_run.DPSD(setup_d)
-                setup_d['Shots'] = nshot - 1
+                setup_d['io']['Shots'] = nshot - 1
                 dpsd_run.DPSD(setup_d)
         except:
             logger.error('Problems writing shotfile for #%d' %nshot)

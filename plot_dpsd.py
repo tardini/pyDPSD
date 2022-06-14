@@ -54,12 +54,14 @@ class plotWindow(QWidget):
 
 def fig_pha(dpsd, color='#c00000'):
 
+    sep_d = dpsd.setup['separation']
+    led_d = dpsd.setup['led']
     fig_pha = plt.figure(figsize=fig_size, dpi=100)
     fig_pha.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.94, hspace=0, wspace=0.4)
     if hasattr(dpsd, 'nshot'):
         fig_pha.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
-    nbins = [dpsd.d_int['PH_nChannels'], dpsd.d_int['PS_nChannels']]
+    nbins = [sep_d['PH_nChannels'], sep_d['PS_nChannels']]
     ranges = [[-0.5, nbins[0]+0.5], [-0.5, nbins[1]+0.5]]
     hpha, xedges, yedges = np.histogram2d(dpsd.PulseHeight, dpsd.PulseShape, bins=nbins, range=ranges)
     hpha = np.flipud(np.rot90(hpha))
@@ -69,22 +71,22 @@ def fig_pha(dpsd, color='#c00000'):
     plt.pcolormesh(xedges, yedges, np.log10(hpha), cmap=matplotlib.cm.jet)
     cbar = plt.colorbar()
 
-    xknot = dpsd.d_int['LineChange']
+    xknot = sep_d['LineChange']
     xline1 = [0, xknot]
-    yknot = dpsd.d_flt['Offset'] + dpsd.d_flt['Slope1'] * (dpsd.d_int['LineChange'] + 1)
-    yline1 = [dpsd.d_flt['Offset'], yknot]
+    yknot = sep_d['Offset'] + sep_d['Slope1'] * (sep_d['LineChange'] + 1)
+    yline1 = [sep_d['Offset'], yknot]
     xline2 = [xknot, nbins[0]]
-    yline2 = [yknot, yknot + dpsd.d_flt['Slope2'] * (nbins[0] - xknot + 1)]
+    yline2 = [yknot, yknot + sep_d['Slope2'] * (nbins[0] - xknot + 1)]
     plt.plot(xline1, yline1, 'r-')
     plt.plot(xline2, yline2, 'r-')
     for lbl in ('DDlower', 'DDupper'):
-        plt.plot([dpsd.d_int[lbl], dpsd.d_int[lbl]], [0, nbins[1]], 'g-')
+        plt.plot([sep_d[lbl], sep_d[lbl]], [0, nbins[1]], 'g-')
     for lbl in ('DTlower', 'DTupper'):
-        plt.plot([dpsd.d_int[lbl], dpsd.d_int[lbl]], [0, nbins[1]], 'm-')
+        plt.plot([sep_d[lbl], sep_d[lbl]], [0, nbins[1]], 'm-')
 
-    xy = [dpsd.d_int['LEDxmin'], dpsd.d_int['LEDymin']]
-    width  = dpsd.d_int['LEDxmax'] - dpsd.d_int['LEDxmin']
-    height = dpsd.d_int['LEDymax'] - dpsd.d_int['LEDymin']
+    xy = [led_d['LEDxmin'], led_d['LEDymin']]
+    width  = led_d['LEDxmax'] - led_d['LEDxmin']
+    height = led_d['LEDymax'] - led_d['LEDymin']
     led_box = Rectangle(xy, width, height, color='b', fill=False)
     plt.gca().add_patch(led_box)
     plt.xlabel('Pulse Height')
@@ -104,7 +106,7 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
     for spec in ['neut1', 'gamma1', 'led', 'DT']:
         plt.plot(dpsd.phs[spec], label=spec)
         ymax = max(ymax, np.max(dpsd.phs[spec][1:]))
-    plt.xlim([0, dpsd.d_int['PH_nChannels']])
+    plt.xlim([0, dpsd.setup['separation']['PH_nChannels']])
     plt.ylim([0, ymax])
     plt.xlabel('Pulse Height')
     plt.ylabel('Occurrences')
@@ -142,7 +144,7 @@ def fig_pmg(dpsd):
     if hasattr(dpsd, 'nshot'):
         fig_pmg.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
-    plt.plot(dpsd.time_led, dpsd.pmgain/float(dpsd.d_int['LEDreference']), 'r-')
+    plt.plot(dpsd.time_led, dpsd.pmgain/float(dpsd.setup['led']['LEDreference']), 'r-')
     plt.xlim([dpsd.time_led[0], dpsd.time_led[-1]])
     plt.ylim([0, 1.5])
     plt.xlabel('Time [s]')

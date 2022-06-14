@@ -150,26 +150,15 @@ class DPSD:
     def __init__(self, dic_in, t_ranges=None):
 
         self.status = True
-        self.d_int = {}
-        self.d_flt = {}
-        int_list = ('BaselineStart', 'BaselineStart', 'BaselineEnd', \
-            'DDlower', 'DDupper', 'DTlower', 'DTupper', \
-            'ShortGate', 'LongGate', 'Threshold', 'Front', 'Tail', \
-            'Marker', 'SaturationHigh', 'SaturationLow', 'ToFWindowLength', \
-            'PH_nChannels', 'PS_nChannels', 'LineChange', \
-            'LEDxmin', 'LEDxmax', 'LEDymin', 'LEDymax', 'LEDFront', 'LEDTail', 'LEDreference')
-        flt_list = ('LEDdt', 'TimeBin', 'TBeg', 'TEnd', 'MaxDifference', 'Slope1', 'Slope2', 'Offset', )
 
-        for key in int_list:
-            self.d_int[key] = int(dic_in[key])
-        for key in flt_list:
-            self.d_flt[key] = float(dic_in[key])
-        HAfile = dic_in['HAfile'].strip()
+        self.setup = dic_in
+        io_d = dic_in['io']
+        HAfile = io_d['HAfile'].strip()
         if HAfile != '':
             self.HAfile = HAfile
             self.run(HAfile, t_ranges=t_ranges)
         else:
-            n_shots = np.atleast_1d(eval(str(dic_in['Shots'])))
+            n_shots = np.atleast_1d(eval(str(io_d['Shots'])))
             for nshot in n_shots:
                 logger.info(nshot)
                 self.nshot = int(nshot)
@@ -178,28 +167,28 @@ class DPSD:
                 HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
                 self.HAfile = HAfile
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
-                if 'SFwrite' in dic_in.keys():
-                    if self.status and dic_in['SFwrite']:
-                        self.sfwrite(exp=dic_in['SFexp'], force=dic_in['SFforce'])
+                if 'SFwrite' in io_d.keys():
+                    if self.status and io_d['SFwrite']:
+                        self.sfwrite(exp=io_d['SFexp'], force=io_d['SFforce'])
 
 
     def run(self, HAfile, t_ranges=None, check_md5=False):
 
-        nxCh = self.d_int['PH_nChannels']
-        nyCh = self.d_int['PS_nChannels']
-        dxCh = np.float32(nxCh)/np.float32(self.d_int['Marker'])
+        nxCh = self.setup['separation']['PH_nChannels']
+        nyCh = self.setup['separation']['PS_nChannels']
+        dxCh = np.float32(nxCh)/np.float32(self.setup['separation']['Marker'])
 
-        min_winlen = max(self.d_int['BaselineStart'], self.d_int['BaselineEnd'])
-        ha = read_ha.READ_HA(HAfile, check_md5=check_md5, min_winlen=min_winlen, max_winlen=self.d_int['ToFWindowLength'])
+        min_winlen = max(self.setup['peak']['BaselineStart'], self.setup['peak']['BaselineEnd'])
+        ha = read_ha.READ_HA(HAfile, check_md5=check_md5, min_winlen=min_winlen, max_winlen=self.setup['setup']['ToFWindowLength'])
         self.status = ha.status
         if not self.status:
             return
 
         if t_ranges is None:
-            if self.d_flt['TEnd'] <= 0:
-                self.d_flt['TEnd'] = ha.t_events[-1] # Take all time events
-            (tind, ) = np.where((ha.t_events >= self.d_flt['TBeg']) & (ha.t_events <= self.d_flt['TEnd']))
-            self.dt = self.d_flt['TEnd'] - self.d_flt['TBeg']
+            if self.setup['setup']['TEnd'] <= 0:
+                self.setup['setup']['TEnd'] = ha.t_events[-1] # Take all time events
+            (tind, ) = np.where((ha.t_events >= self.setup['setup']['TBeg']) & (ha.t_events <= self.setup['setup']['TEnd']))
+            self.dt = self.setup['setup']['TEnd'] - self.setup['setup']['TBeg']
         else: # Force time ranges (make sure they don't overlap!)
             depth = lambda L: isinstance(L, list) and max(map(depth, L))+1 # list depth
             if depth(t_ranges) == 1:
@@ -215,11 +204,11 @@ class DPSD:
         logger.info('TBeg = %8.4f' %self.time[0]) 
         logger.info('TEnd = %8.4f' %self.time[-1]) 
         n_pulses = len(self.time)
-        n_timebins = int((self.time[-1] - self.time[0])/self.d_flt['TimeBin'])
-        n_led = int((self.time[-1] - self.time[0])/self.d_flt['LEDdt'])
+        n_timebins = int((self.time[-1] - self.time[0])/self.setup['setup']['TimeBin'])
+        n_led = int((self.time[-1] - self.time[0])/self.setup['led']['LEDdt'])
 
-        self.time_cnt = self.time[0] + self.d_flt['TimeBin']*(0.5 + np.arange(n_timebins))
-        self.time_led = self.time[0] + self.d_flt['LEDdt']*(0.5 + np.arange(n_led))
+        self.time_cnt = self.time[0] + self.setup['setup']['TimeBin']*(0.5 + np.arange(n_timebins))
+        self.time_led = self.time[0] + self.setup['led']['LEDdt']*(0.5 + np.arange(n_led))
 
         self.winlen = ha.winlen[tind]
         pulses = ha.pulses[tind]
@@ -239,17 +228,17 @@ class DPSD:
         maxpos = np.argmax(pulses, axis=1)
         pulse_max = np.max(pulses, axis=1)
 
-        max_LG = np.minimum(maxpos + self.d_int['LongGate' ], self.winlen)
-        max_SG = np.minimum(maxpos + self.d_int['ShortGate'], self.winlen)
-        tof_win_len = self.d_int['ToFWindowLength']
-        sat_high = float(self.d_int['SaturationHigh'])
-        sat_low  = float(self.d_int['SaturationLow'])
+        max_LG = np.minimum(maxpos + self.setup['peak']['LongGate' ], self.winlen)
+        max_SG = np.minimum(maxpos + self.setup['peak']['ShortGate'], self.winlen)
+        tof_win_len = self.setup['setup']['ToFWindowLength']
+        sat_high = float(self.setup['peak']['SaturationHigh'])
+        sat_low  = float(self.setup['peak']['SaturationLow'])
         pulse_len = np.minimum(self.winlen, tof_win_len)
-        pulse_baseend = pulse_len - self.d_int['BaselineEnd']
+        pulse_baseend = pulse_len - self.setup['peak']['BaselineEnd']
         
         logger.info('Baseline subtraction')
         self.pulses = pulses.astype(np.float32)
-        baseline = Baseline(self.d_int['BaselineStart'], self.d_int['BaselineEnd'], pulse_len, self.pulses)
+        baseline = Baseline(self.setup['peak']['BaselineStart'], self.setup['peak']['BaselineEnd'], pulse_len, self.pulses)
         self.pulses -= baseline[:, None]
 
 # Saturation detection
@@ -261,7 +250,7 @@ class DPSD:
 
         logger.info('Baseline conditioned 2') 
 
-        self.TotalIntegral = BaselineCond2(self.d_int['BaselineStart'], self.d_flt['MaxDifference'], self.pulses, pulse_len, maxpos, max_LG)
+        self.TotalIntegral = BaselineCond2(self.setup['peak']['BaselineStart'], self.setup['peak']['MaxDifference'], self.pulses, pulse_len, maxpos, max_LG)
         self.ShortIntegral = slice_trapz(self.pulses, maxpos, max_SG)
         self.LongIntegral  = slice_trapz(self.pulses, maxpos, max_LG)
         ind3 = np.where(self.LongIntegral > 0)[0]
@@ -275,27 +264,27 @@ class DPSD:
         self.flg = {}
 
         self.flg['led'] =  \
-            (self.PulseHeight > float(self.d_int['LEDxmin'])) & \
-            (self.PulseHeight < float(self.d_int['LEDxmax'])) & \
-            (self.PulseShape > float(self.d_int['LEDymin'])) & \
-            (self.PulseShape < float(self.d_int['LEDymax'])) 
+            (self.PulseHeight > float(self.setup['led']['LEDxmin'])) & \
+            (self.PulseHeight < float(self.setup['led']['LEDxmax'])) & \
+            (self.PulseShape  > float(self.setup['led']['LEDymin'])) & \
+            (self.PulseShape  < float(self.setup['led']['LEDymax'])) 
 
         logger.info('Pile-up detection')
 
-        self.flg_peaks = PileUpDet(self.d_int['Front'], self.d_int['Tail'], self.d_int['Threshold'], self.d_int['LEDFront'], self.d_int['LEDTail'], self.flg['led'], pulses)
+        self.flg_peaks = PileUpDet(self.setup['peak']['Front'], self.setup['peak']['Tail'], self.setup['peak']['Threshold'], self.setup['led']['LEDFront'], self.setup['led']['LEDTail'], self.flg['led'], pulses)
 
 # LED correction
 
         logger.info('LED correction')
 
-        self.pmgain, self.PulseHeight = led_correction(self.d_flt['LEDdt'], dxCh, self.d_int['LEDreference'], self.time, self.TotalIntegral, self.flg['led'])
+        self.pmgain, self.PulseHeight = led_correction(self.setup['led']['LEDdt'], dxCh, self.setup['led']['LEDreference'], self.time, self.TotalIntegral, self.flg['led'])
 
         self.TotalIntegral = self.PulseHeight/dxCh
 
-        flg_slope1 = (self.PulseHeight <= self.d_int['LineChange'])
-        flg1n = (self.PulseShape <= self.d_flt['Offset'] + self.d_flt['Slope1']*self.PulseHeight)
-        offset2 = self.d_flt['Offset'] + self.d_flt['Slope1']*self.d_int['LineChange']
-        flg2n = (self.PulseShape <= offset2 + self.d_flt['Slope2']*(self.PulseHeight-self.d_int['LineChange']))
+        flg_slope1 = (self.PulseHeight <= self.setup['separation']['LineChange'])
+        flg1n = (self.PulseShape <= self.setup['separation']['Offset'] + self.setup['separation']['Slope1']*self.PulseHeight)
+        offset2 = self.setup['separation']['Offset'] + self.setup['separation']['Slope1']*self.setup['separation']['LineChange']
+        flg2n = (self.PulseShape <= offset2 + self.setup['separation']['Slope2']*(self.PulseHeight-self.setup['separation']['LineChange']))
 
         flg1  =   flg_slope1  & flg1n
         flg2  = (~flg_slope1) & flg2n
@@ -307,11 +296,11 @@ class DPSD:
         self.flg['neut1']  = (flg1  + flg2 ) & (self.flg['phys'])
         self.flg['gamma1'] = (flg1g + flg2g) & (self.flg['phys'])
         self.flg['DD'] = self.flg['neut1'] & \
-            (self.PulseHeight >= self.d_int['DDlower']) & \
-            (self.PulseHeight <= self.d_int['DDupper'])
+            (self.PulseHeight >= self.setup['separation']['DDlower']) & \
+            (self.PulseHeight <= self.setup['separation']['DDupper'])
         self.flg['DT'] = self.flg['neut1'] & \
-            (self.PulseHeight >= self.d_int['DTlower']) & \
-            (self.PulseHeight <= self.d_int['DTupper'])
+            (self.PulseHeight >= self.setup['separation']['DTlower']) & \
+            (self.PulseHeight <= self.setup['separation']['DTupper'])
 
         self.event_type = np.zeros(n_pulses, dtype=np.int32) - 1
         self.event_type[self.flg['neut1']]  = 0
@@ -320,21 +309,21 @@ class DPSD:
         self.event_type[self.flg['led']]    = 3
 
         cnt_list = ('neut1', 'gamma1', 'led', 'pileup', 'sat', 'phys', 'DD', 'DT')
-        nxCh = self.d_int['PH_nChannels']
+        nxCh = self.setup['separation']['PH_nChannels']
 
         self.cnt = {}
         self.phs = {}
 
         for spec in cnt_list:
-            cnt, tedges = np.histogram(self.time[self.flg[spec]], bins=n_timebins, range=[self.time_cnt[0]-0.5*self.d_flt['TimeBin'], self.time_cnt[-1]+0.5*self.d_flt['TimeBin']])
-            phs, edges = np.histogram(np.float32(nxCh)/np.float32(self.d_int['Marker'])*self.TotalIntegral[self.flg[spec]], bins=nxCh, range=[-0.5, nxCh + 0.5])
+            cnt, tedges = np.histogram(self.time[self.flg[spec]], bins=n_timebins, range=[self.time_cnt[0]-0.5*self.setup['setup']['TimeBin'], self.time_cnt[-1]+0.5*self.setup['setup']['TimeBin']])
+            phs, edges = np.histogram(np.float32(nxCh)/np.float32(self.setup['separation']['Marker'])*self.TotalIntegral[self.flg[spec]], bins=nxCh, range=[-0.5, nxCh + 0.5])
             self.cnt[spec] = cnt.astype(np.float32)
             self.phs[spec] = phs.astype(np.float32)/self.dt
             logger.info('%s %d', spec, np.sum(self.flg[spec]))
 
 # Move to 1/s units
         for spec in self.cnt.keys():
-            self.cnt[spec] /= self.d_flt['TimeBin']
+            self.cnt[spec] /= self.setup['setup']['TimeBin']
 
         total = self.cnt['neut1'] + self.cnt['gamma1'] + self.cnt['led']
 # Assuming pile-ups are all 2 events per window

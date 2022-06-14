@@ -23,8 +23,6 @@ try:
 except:
     pass
 
-xml = dicxml.DIX()
-
 os.environ['BROWSER'] = '/usr/bin/firefox'
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
@@ -35,28 +33,6 @@ logger.addHandler(hnd)
 logger.setLevel(logging.INFO)
 
 dpsd_dir = os.path.dirname(os.path.realpath(__file__))
-
-
-def setup_dic(xmld_node):
-
-    setup_d = {}
-    for key, val_d in xmld_node.items():
-        if val_d['@type'] == 'str':
-            if '#text' in val_d.keys():
-                setup_d[key] = val_d['#text']
-            else:
-                setup_d[key] = ''
-        elif val_d['@type'] == 'bool':
-            if val_d['#text'].lower() == 'true':
-                setup_d[key] = True
-            else:
-                setup_d[key] = False
-        elif val_d['@type'] == 'int':
-            setup_d[key] = int(val_d['#text'])
-        elif val_d['@type'] == 'flt':
-            setup_d[key] = float(val_d['#text'])
-
-    return setup_d
 
 
 class DPSD(QMainWindow):
@@ -180,10 +156,8 @@ class DPSD(QMainWindow):
 
 # User options
 
-        self.xml_d = xml.xml2dict('%s/xml/default.xml' %dpsd_dir)['main']
-        self.setup_init = {}
-        for node, xdic in self.xml_d.items():
-            self.setup_init[node] = setup_dic(xdic)
+        self.xml_d = dicxml.xml2dict('%s/xml/default.xml' %dpsd_dir)['main']
+        self.setup_init = dicxml.xml2val_dic(self.xml_d)
         self.gui = {}
         for node in self.setup_init.keys():
             self.gui[node] = {}
@@ -333,25 +307,33 @@ class DPSD(QMainWindow):
         layout.setColumnStretch(layout.columnCount(), 1)
 
 
-    def get_gui(self, node):
-
+    def gui2xmld(self):
+        '''Returns a dic of the xml-type, #text and @attr'''
         dpsd_dic = {}
+        for node in self.gui.keys():
+            dpsd_dic[node] = self.get_gui_tab(node)
+        return dpsd_dic
+
+
+    def get_gui_tab(self, node):
+
+        node_dic = {}
         for key, val in self.gui[node].items():
-            dpsd_dic[key] = {}
+            node_dic[key] = {}
             if isinstance(val, QLineEdit):
-                dpsd_dic[key]['#text'] = val.text()
+                node_dic[key]['#text'] = val.text()
             elif isinstance(val, QCheckBox):
                 if val.isChecked():
-                    dpsd_dic[key]['#text'] = 'true'
+                    node_dic[key]['#text'] = 'true'
                 else:
-                    dpsd_dic[key]['#text'] = 'false'
+                    node_dic[key]['#text'] = 'false'
             elif isinstance(val, QButtonGroup):
                 bid = val.checkedId()
-                dpsd_dic[key]['#text'] = self.rblists[key][bid]
-            dpsd_dic[key]['@type' ] = self.xml_d[node][key]['@type']
-            dpsd_dic[key]['@label'] = self.xml_d[node][key]['@label']
+                node_dic[key]['#text'] = self.rblists[key][bid]
+            node_dic[key]['@type' ] = self.xml_d[node][key]['@type']
+            node_dic[key]['@label'] = self.xml_d[node][key]['@label']
 
-        return dpsd_dic
+        return node_dic
 
 
     def set_gui(self, xml_d):
@@ -394,31 +376,26 @@ class DPSD(QMainWindow):
             fxml = ftmp[0]
         else:
             fxml = str(ftmp)
-        setup_d = xml.xml2dict(fxml)
+        setup_d = dicxml.xml2dict(fxml)
         self.set_gui(setup_d['main'])
 
 
     def save_xml(self):
 
         out_dic = {'main': {}}
-        for node in self.gui.keys():
-            out_dic['main'][node] = self.get_gui(node)
+        out_dic['main'] = self.gui2xmld()
         ftmp = QFileDialog.getSaveFileName(self, 'Save file', \
             '%s/xml' %dpsd_dir, "xml files (*.xml)")
         if qt5:
             fxml = ftmp[0]
         else:
             fxml = str(ftmp)
-        xml.dict2xml(out_dic, fxml)
+        dicxml.dict2xml(out_dic, fxml)
 
 
     def run(self):
 
-        dpsd_dic = {}
-        for node in self.gui.keys():
-            gui_d = self.get_gui(node)
-            for key in gui_d.keys():
-               dpsd_dic[key] = setup_dic(gui_d)[key]
+        dpsd_dic = dicxml.xml2val_dic(self.gui2xmld())
         self.dp = dpsd_run.DPSD(dpsd_dic)
         logger.info('Done calculation')
 
@@ -458,7 +435,7 @@ class DPSD(QMainWindow):
     def write_sf(self):
 
         if hasattr(self, 'dp'):
-            dic = self.get_gui('io')
+            dic = self.get_gui_tab('io')
             if self.dp.status:
                 self.dp.sfwrite(exp=dic['SFexp'], force=dic['SFforce'])
         else:
