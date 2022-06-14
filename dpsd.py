@@ -8,22 +8,22 @@ import os, sys, logging, webbrowser
 
 try:
     from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
-    from PyQt5.QtGui import QPixmap, QIcon
+    from PyQt5.QtGui import QPixmap, QIcon, QIntValidator, QDoubleValidator
     from PyQt5.QtCore import Qt, QRect, QSize
     qt5 = True
 except:
-    from PyQt4.QtCore import Qt, QRect, QSize
+    from PyQt4.QtCore import Qt, QRect, QSize, QIntValidator, QDoubleValidator
     from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
     qt5 = False
 
 import numpy as np
-import dixm, dpsd_run, plot_dpsd, plot_pulses
+import dicxml, dpsd_run, plot_dpsd, plot_pulses
 try:
     import aug_sfutils as sf
 except:
     pass
 
-xml = dixm.DIX()
+xml = dicxml.DIX()
 
 os.environ['BROWSER'] = '/usr/bin/firefox'
 
@@ -34,31 +34,29 @@ logger = logging.getLogger('DPSD_GUI')
 logger.addHandler(hnd)
 logger.setLevel(logging.INFO)
 
-lbl_d = {'SubtBaseline': 'Subtract baseline', \
-    'LEDcorrection': 'LED correction', \
-    'SFwrite': 'Write shotfiles', 'SFforce': 'Force SF write', \
-    'HAfile': 'HA*.dat file', 'SFexp': 'Shotfile exp', \
-    'TimeBin': 'Time step', 'TBeg': 'Start time', 'TEnd': 'End time', \
-    'ToFWindowLength': '#samples for analysis', \
-    'BaselineStart': 'Baseline start', 'BaselineEnd': 'Baseline end', \
-    'SaturationHigh': 'Saturation upper limit', \
-    'SaturationLow': 'Saturation lower limit', \
-    'LongGate': 'Long gate', 'ShortGate': 'Short gate', \
-    'MaxDifference': 'Maximum difference', \
-    'PH_nChannels': '#bins Pulse Height', 'PS_nChannels': '#bins Pulse Shape', \
-    'DDlower': 'Lower PH-limit for DD', 'DDupper': 'Upper PH-limit for DD', \
-    'DTlower': 'Lower PH-limit for DT', 'DTupper': 'Upper PH-limit for DT', \
-    'Slope1': 'Slope of 1st sep.line', 'Slope2': 'Slope of 2nd sep.line', \
-    'Offset': 'Offset of 1st sep.line', 'LineChange': 'Bin line1->line2', \
-    'LEDdt': 'LED time sampling', 'LEDfront': 'LED front', 'LEDtail': 'LED tail', \
-    'LEDreference': 'LED reference bin', \
-    'LEDxmin': 'Min PH bin for LED detection', \
-    'LEDxmax': 'Max PH bin for LED detection', \
-    'LEDymin': 'Min PS bin for LED detection', \
-    'LEDymax': 'Max PS bin for LED detection'
-    }
-
 dpsd_dir = os.path.dirname(os.path.realpath(__file__))
+
+
+def setup_dic(xmld_node):
+
+    setup_d = {}
+    for key, val_d in xmld_node.items():
+        if val_d['@type'] == 'str':
+            if '#text' in val_d.keys():
+                setup_d[key] = val_d['#text']
+            else:
+                setup_d[key] = ''
+        elif val_d['@type'] == 'bool':
+            if val_d['#text'].lower() == 'true':
+                setup_d[key] = True
+            else:
+                setup_d[key] = False
+        elif val_d['@type'] == 'int':
+            setup_d[key] = int(val_d['#text'])
+        elif val_d['@type'] == 'flt':
+            setup_d[key] = float(val_d['#text'])
+
+    return setup_d
 
 
 class DPSD(QMainWindow):
@@ -182,70 +180,75 @@ class DPSD(QMainWindow):
 
 # User options
 
-        self.setup_init = xml.xml2dict('%s/xml/default.xml' %dpsd_dir)
+        self.xml_d = xml.xml2dict('%s/xml/default.xml' %dpsd_dir)['main']
+        self.setup_init = {}
+        for node, xdic in self.xml_d.items():
+            self.setup_init[node] = setup_dic(xdic)
         self.gui = {}
+        for node in self.setup_init.keys():
+            self.gui[node] = {}
         user = os.getenv('USER')
 
 # Entry widgets
 
         self.rblists = {'SFexp':['AUGD', os.getenv('USER')]}
 
-#------------
-# Input files
-#------------
-
-# Checkbutton
+#----------
+# I/O files
+#----------
 
         jrow = 0
+        node = 'io'
 
         key = 'HAfile'
-        lbl = QLabel(lbl_d[key])
-        self.gui[key] = QLineEdit(self.setup_init[key])
+        lbl = QLabel(self.xml_d[node][key]['@label'])
+        self.gui[node][key] = QLineEdit(self.setup_init[node][key])
         input_layout.addWidget(lbl, jrow, 0)
-        input_layout.addWidget(self.gui[key], jrow, 1, 1, 3)
+        input_layout.addWidget(self.gui[node][key], jrow, 1, 1, 3)
         jrow += 1
 
         key = 'Shots'
-        lbl = QLabel(key)
-        self.gui[key] = QLineEdit(self.setup_init[key])
+        lbl = QLabel(self.xml_d[node][key]['@label'])
+        self.gui[node][key] = QLineEdit(self.setup_init[node][key])
         input_layout.addWidget(lbl, jrow, 0)
-        input_layout.addWidget(self.gui[key], jrow, 1, 1, 3)
+        input_layout.addWidget(self.gui[node][key], jrow, 1, 1, 3)
         jrow += 1
 
         key = 'SFwrite'
-        lbl = lbl_d[key]
-        self.gui[key] = QCheckBox(lbl)
+        lbl = self.xml_d[node][key]['@label']
+        self.gui[node][key] = QCheckBox(lbl)
         if 'aug_sfutils' in sys.modules:
-            input_layout.addWidget(self.gui[key], jrow, 0, 1, 2)
-            if self.setup_init[key].lower().strip() == 'true':
-                self.gui[key].setChecked(True)
+            input_layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
+            if self.setup_init[node][key]:
+                self.gui[node][key].setChecked(True)
             jrow += 1
 
         key = 'SFforce'
-        lbl = lbl_d[key]
-        self.gui[key] = QCheckBox(lbl)
+        lbl = self.xml_d[node][key]['@label']
+        self.gui[node][key] = QCheckBox(lbl)
         if 'aug_sfutils' in sys.modules:
-            input_layout.addWidget(self.gui[key], jrow, 0, 1, 2)
-            if self.setup_init[key].lower().strip() == 'true':
-                self.gui[key].setChecked(True)
+            input_layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
+            if self.setup_init[node][key]:
+                self.gui[node][key].setChecked(True)
             jrow += 1
 
 # Radiobutton
 
         key = 'SFexp'
         rblist = self.rblists[key]
-        self.gui[key] = QButtonGroup(self)
+        self.gui[node][key] = QButtonGroup(self)
         if 'aug_sfutils' in sys.modules:
-            input_layout.addWidget(QLabel(lbl_d[key]), jrow, 0)
+            lbl = QLabel(self.xml_d[node][key]['@label'])
+            input_layout.addWidget(lbl, jrow, 0)
             for jcol, val in enumerate(rblist):
                 but = QRadioButton(val)
                 if jcol == 0:
                     but.setChecked(True)
-                if self.setup_init[key].lower() == val.lower():
+                if self.setup_init[node][key].lower() == val.lower():
                     but.setChecked(True)
                 input_layout.addWidget(but, jrow, jcol+1)
-                self.gui[key].addButton(but)
-                self.gui[key].setId(but, jcol)
+                self.gui[node][key].addButton(but)
+                self.gui[node][key].setId(but, jcol)
             jrow += 1
 
         input_layout.setRowStretch(input_layout.rowCount(), 1)
@@ -255,7 +258,7 @@ class DPSD(QMainWindow):
 #------
 
         entries = ['TimeBin', 'TBeg', 'TEnd', 'ToFWindowLength']
-        self.new_tab(setup_layout, entries)
+        self.new_tab(setup_layout, 'setup', entries=entries)
 
 #-----
 # Peak
@@ -265,7 +268,7 @@ class DPSD(QMainWindow):
         entries = ['BaselineStart', 'BaselineEnd', 'Threshold', \
             'Front', 'Tail', 'SaturationHigh', 'SaturationLow', \
             'LongGate', 'ShortGate', 'MaxDifference']
-        self.new_tab(peak_layout, entries, checkbuts=cb)
+        self.new_tab(peak_layout, 'peak', entries, checkbuts=cb)
 
 #-----------
 # Separation
@@ -274,7 +277,7 @@ class DPSD(QMainWindow):
         entries = ['Marker', 'PH_nChannels', 'PS_nChannels', \
             'DDlower', 'DDupper', 'DTlower', 'DTupper', \
             'Slope1', 'Slope2', 'Offset', 'LineChange']
-        self.new_tab(sep_layout, entries)
+        self.new_tab(sep_layout, 'separation', entries)
 
 #---------------
 # LED correction
@@ -283,7 +286,7 @@ class DPSD(QMainWindow):
         cb = ['LEDcorrection']
         entries = ['LEDdt', 'LEDFront', 'LEDTail', 'LEDreference', \
             'LEDxmin', 'LEDxmax', 'LEDymin', 'LEDymax']
-        self.new_tab(led_layout, entries, checkbuts=cb)
+        self.new_tab(led_layout, 'led', entries, checkbuts=cb)
 
         self.setStyleSheet("QLabel { width: 4 }")
         self.setStyleSheet("QLineEdit { width: 4 }")
@@ -297,71 +300,90 @@ class DPSD(QMainWindow):
         webbrowser.open('https://www.aug.ipp.mpg.de/~git/ne213/dpsd/index.html')
 
 
-    def new_tab(self, layout, entries, checkbuts=[]):
+    def new_tab(self, layout, node, entries=[], checkbuts=[]):
 # Checkbutton
 
         jrow = 0
         for key in checkbuts:
-            lbl = lbl_d[key]
-            self.gui[key] = QCheckBox(lbl)
-            layout.addWidget(self.gui[key], jrow, 0, 1, 2)
-            if self.setup_init[key].lower().strip() == 'true':
-                self.gui[key].setChecked(True)
+            lbl = self.xml_d[node][key]['@label']
+            self.gui[node][key] = QCheckBox(lbl)
+            layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
+            if self.setup_init[node][key]:
+                self.gui[node][key].setChecked(True)
             jrow += 1
 
         for key in entries:
-            val = self.setup_init[key]
-            if key in lbl_d.keys():
-                lbl = lbl_d[key]
-            else:
-                lbl = key
+            val = self.setup_init[node][key]
+            lbl = self.xml_d[node][key]['@label']
             qlbl = QLabel(lbl)
             qlbl.setFixedWidth(200)
-            self.gui[key] = QLineEdit(val)
-            self.gui[key].setFixedWidth(90)
+            self.gui[node][key] = QLineEdit(str(val))
+            self.gui[node][key].setFixedWidth(90)
+            if isinstance(val, int):
+                valid = QIntValidator()
+                self.gui[node][key].setValidator(valid)
+            elif isinstance(val, float):
+                valid = QDoubleValidator()
+                self.gui[node][key].setValidator(valid)
             layout.addWidget(qlbl         , jrow, 0)
-            layout.addWidget(self.gui[key], jrow, 1)
+            layout.addWidget(self.gui[node][key], jrow, 1)
             jrow += 1
 
         layout.setRowStretch(layout.rowCount(), 1)
         layout.setColumnStretch(layout.columnCount(), 1)
 
 
-    def get_gui(self):
+    def get_gui(self, node):
 
         dpsd_dic = {}
-        for key, val in self.gui.items():
+        for key, val in self.gui[node].items():
+            dpsd_dic[key] = {}
             if isinstance(val, QLineEdit):
-                dpsd_dic[key] = val.text()
+                dpsd_dic[key]['#text'] = val.text()
             elif isinstance(val, QCheckBox):
-                dpsd_dic[key] = val.isChecked()
+                if val.isChecked():
+                    dpsd_dic[key]['#text'] = 'true'
+                else:
+                    dpsd_dic[key]['#text'] = 'false'
             elif isinstance(val, QButtonGroup):
                 bid = val.checkedId()
-                dpsd_dic[key] = self.rblists[key][bid]
+                dpsd_dic[key]['#text'] = self.rblists[key][bid]
+            dpsd_dic[key]['@type' ] = self.xml_d[node][key]['@type']
+            dpsd_dic[key]['@label'] = self.xml_d[node][key]['@label']
 
         return dpsd_dic
 
 
     def set_gui(self, xml_d):
 
-        for key, val in xml_d.items():
-            val = val.strip()
-            val_low = val.lower()
-            widget = self.gui[key]
-            if isinstance(widget, QCheckBox):
-                if val_low == 'false':
-                    widget.setChecked(False)
-                elif val_low == 'true':
-                    widget.setChecked(True)
-            elif isinstance(widget, QButtonGroup):
-                for but in widget.buttons():
-                    if but.text().lower() == val_low:
-                        but.setChecked(True)
-            elif isinstance(widget, QLineEdit):          
-                if val_low == '':
-                    widget.setText(' ')
+        for node, val1 in xml_d.items():
+            for key, vald in val1.items():
+                if '#text' in vald.keys():
+                    val = vald['#text']
                 else:
-                    widget.setText(val)
+                    val = ''
+                val = val.strip()
+                val_low = val.lower()
+                widget = self.gui[node][key]
+                if isinstance(widget, QCheckBox):
+                    if val_low == 'false':
+                        widget.setChecked(False)
+                    elif val_low == 'true':
+                        widget.setChecked(True)
+                elif isinstance(widget, QButtonGroup):
+                    for but in widget.buttons():
+                        if but.text().lower() == val_low:
+                            but.setChecked(True)
+                elif isinstance(widget, QLineEdit):
+                    if val_low == '':
+                        widget.setText(' ')
+                    else:
+                        widget.setText(val)
+                elif isinstance(widget, QComboBox):
+                    for index in range(widget.count()):
+                        if widget.itemText(index).strip() == val.strip():
+                            widget.setCurrentIndex(index)
+                            break
 
 
     def load_xml(self):
@@ -373,24 +395,30 @@ class DPSD(QMainWindow):
         else:
             fxml = str(ftmp)
         setup_d = xml.xml2dict(fxml)
-        self.set_gui(setup_d)
+        self.set_gui(setup_d['main'])
 
 
     def save_xml(self):
 
-        dpsd_dic = self.get_gui()
+        out_dic = {'main': {}}
+        for node in self.gui.keys():
+            out_dic['main'][node] = self.get_gui(node)
         ftmp = QFileDialog.getSaveFileName(self, 'Save file', \
             '%s/xml' %dpsd_dir, "xml files (*.xml)")
         if qt5:
             fxml = ftmp[0]
         else:
             fxml = str(ftmp)
-        xml.dict2xml(dpsd_dic, fxml)
+        xml.dict2xml(out_dic, fxml)
 
 
     def run(self):
 
-        dpsd_dic = self.get_gui()
+        dpsd_dic = {}
+        for node in self.gui.keys():
+            gui_d = self.get_gui(node)
+            for key in gui_d.keys():
+               dpsd_dic[key] = setup_dic(gui_d)[key]
         self.dp = dpsd_run.DPSD(dpsd_dic)
         logger.info('Done calculation')
 
@@ -430,7 +458,7 @@ class DPSD(QMainWindow):
     def write_sf(self):
 
         if hasattr(self, 'dp'):
-            dic = self.get_gui()
+            dic = self.get_gui('io')
             if self.dp.status:
                 self.dp.sfwrite(exp=dic['SFexp'], force=dic['SFforce'])
         else:

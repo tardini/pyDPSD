@@ -38,9 +38,9 @@ class DIX:
                 ptext = doc.createTextNode(val2.strip())
                 var.appendChild(ptext)
 
-        file = open(f_xml, 'wb')
-        file.write(doc.toprettyxml(indent='  ', newl='\n', encoding='UTF-8'))
-        file.close()
+        f = open(f_xml, 'wb')
+        f.write(doc.toprettyxml(indent='  ', newl='\n', encoding='UTF-8'))
+        f.close()
         logger.info('Saved setup to XML file %s' %f_xml)
 
 

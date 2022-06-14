@@ -2,7 +2,7 @@ import sys, os, logging
 
 import numpy as np
 import numba as nb
-import dixm, read_ha
+import read_ha
 
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')

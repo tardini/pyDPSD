@@ -1,43 +1,53 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<input>
-  <HAfile> </HAfile>
-  <Shots>range(40582, 40585)</Shots>
-  <SFwrite>true</SFwrite>
-  <SFforce>false</SFforce>
-  <SFexp>AUGD</SFexp>
-  <TimeBin>0.001</TimeBin>
-  <TBeg>0</TBeg>
-  <TEnd>20</TEnd>
-  <ToFWindowLength>50</ToFWindowLength>
-  <SubtBaseline>true</SubtBaseline>
-  <BaselineStart>7</BaselineStart>
-  <BaselineEnd>0</BaselineEnd>
-  <Threshold>10</Threshold>
-  <Front>6</Front>
-  <Tail>6</Tail>
-  <SaturationHigh>8190</SaturationHigh>
-  <SaturationLow>-100</SaturationLow>
-  <LongGate>14</LongGate>
-  <ShortGate>3</ShortGate>
-  <MaxDifference>20</MaxDifference>
-  <Marker>49000</Marker>
-  <PH_nChannels>4096</PH_nChannels>
-  <PS_nChannels>1024</PS_nChannels>
-  <DDlower>28</DDlower>
-  <DDupper>340</DDupper>
-  <DTlower>500</DTlower>
-  <DTupper>4095</DTupper>
-  <Slope1>0.15</Slope1>
-  <Slope2>0.023</Slope2>
-  <Offset>560</Offset>
-  <LineChange>350</LineChange>
-  <LEDcorrection>true</LEDcorrection>
-  <LEDdt>0.02</LEDdt>
-  <LEDFront>6</LEDFront>
-  <LEDTail>6</LEDTail>
-  <LEDreference>3500</LEDreference>
-  <LEDxmin>2000</LEDxmin>
-  <LEDxmax>10000</LEDxmax>
-  <LEDymin>85</LEDymin>
-  <LEDymax>350</LEDymax>
-</input>
+<?xml version="1.0"?>
+<main>
+    <io>
+        <Shots type="str" label="Shots">range(40582, 40585)</Shots>
+        <HAfile type="str" label="HA*.dat file"> </HAfile>
+        <SFwrite type="bool" label="Write shotfiles">true</SFwrite>
+        <SFforce type="bool" label="Force SF write">false</SFforce>
+        <SFexp type="str" label="Shotfile exp">AUGD</SFexp>
+    </io>
+    <setup>
+        <TimeBin type="flt" label="Time step">0.001</TimeBin>
+        <TBeg type="flt" label="Start time">0</TBeg>
+        <TEnd type="flt" label="End time">20</TEnd>
+        <ToFWindowLength type="int" label="#samples for analysis">50</ToFWindowLength>
+    </setup>
+    <peak>
+        <SubtBaseline type="bool" label="Subtract baseline">true</SubtBaseline>
+        <BaselineStart type="int" label="Baseline start">7</BaselineStart>
+        <BaselineEnd type="int" label="Baseline end">0</BaselineEnd>
+        <Threshold type="int" label="Threshold">10</Threshold>
+        <Front type="int" label="Front">6</Front>
+        <Tail type="int" label="Tail">6</Tail>
+        <SaturationHigh type="int" label="Saturation upper limit">8190</SaturationHigh>
+        <SaturationLow type="int" label="Saturation lower limit">-100</SaturationLow>
+        <LongGate type="int" label="Long gate">14</LongGate>
+        <ShortGate type="int" label="Short gate">3</ShortGate>
+        <MaxDifference type="int" label="Maximum difference">20</MaxDifference>
+    </peak>
+    <separation>
+        <Marker type="int" label="Marker">49000</Marker>
+        <PH_nChannels type="int" label="#bins Pulse Height">4096</PH_nChannels>
+        <PS_nChannels type="int" label="#bins Pulse Shape">1024</PS_nChannels>
+        <DDlower type="int" label="Lower PH-limit for DD">28</DDlower>
+        <DDupper type="int" label="Upper PH-limit for DD">340</DDupper>
+        <DTlower type="int" label="Lower PH-limit for DT">500</DTlower>
+        <DTupper type="int" label="Upper PH-limit for DT">4095</DTupper>
+        <Slope1 type="flt" label="Slope of 1st sep.line">0.15</Slope1>
+        <Slope2 type="flt" label="Slope of 2nd sep.line">0.023</Slope2>
+        <Offset type="int" label="Offset of 1st sep.line">560</Offset>
+        <LineChange type="int" label="Bin line1-&gt;line2">350</LineChange>
+    </separation>
+    <led>
+        <LEDFront type="int" label="LED front">6</LEDFront>
+        <LEDTail type="int" label="LED tail">6</LEDTail>
+        <LEDcorrection type="bool" label="LED correction">true</LEDcorrection>
+        <LEDreference type="int" label="LED reference bin">3500</LEDreference>
+        <LEDxmin type="int" label="Min PH bin for LED detection">2000</LEDxmin>
+        <LEDxmax type="int" label="Max PH bin for LED detection">10000</LEDxmax>
+        <LEDymin type="int" label="Min PS bin for LED detection">85</LEDymin>
+        <LEDymax type="int" label="Max PS bin for LED detection">350</LEDymax>
+        <LEDdt type="flt" label="LED time sampling">0.02</LEDdt>
+    </led>
+</main>
