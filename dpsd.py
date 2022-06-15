@@ -189,18 +189,18 @@ class DPSD(QMainWindow):
         jrow += 1
 
         key = 'SFwrite'
-        lbl = self.xml_d[node][key]['@label']
-        self.gui[node][key] = QCheckBox(lbl)
         if 'aug_sfutils' in sys.modules:
+            lbl = self.xml_d[node][key]['@label']
+            self.gui[node][key] = QCheckBox(lbl)
             input_layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
             if self.setup_init[node][key]:
                 self.gui[node][key].setChecked(True)
             jrow += 1
 
         key = 'SFforce'
-        lbl = self.xml_d[node][key]['@label']
-        self.gui[node][key] = QCheckBox(lbl)
         if 'aug_sfutils' in sys.modules:
+            lbl = self.xml_d[node][key]['@label']
+            self.gui[node][key] = QCheckBox(lbl)
             input_layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
             if self.setup_init[node][key]:
                 self.gui[node][key].setChecked(True)
@@ -209,9 +209,9 @@ class DPSD(QMainWindow):
 # Radiobutton
 
         key = 'SFexp'
-        rblist = self.rblists[key]
-        self.gui[node][key] = QButtonGroup(self)
         if 'aug_sfutils' in sys.modules:
+            rblist = self.rblists[key]
+            self.gui[node][key] = QButtonGroup(self)
             lbl = QLabel(self.xml_d[node][key]['@label'])
             input_layout.addWidget(lbl, jrow, 0)
             for jcol, val in enumerate(rblist):
@@ -340,6 +340,8 @@ class DPSD(QMainWindow):
 
         for node, val1 in xml_d.items():
             for key, vald in val1.items():
+                if key not in self.gui[node].keys():
+                    continue
                 if '#text' in vald.keys():
                     val = vald['#text']
                 else:
@@ -382,7 +384,7 @@ class DPSD(QMainWindow):
 
     def save_xml(self):
 
-        out_dic = {'main': {}}
+        out_dic = {}
         out_dic['main'] = self.gui2xmld()
         ftmp = QFileDialog.getSaveFileName(self, 'Save file', \
             '%s/xml' %dpsd_dir, "xml files (*.xml)")

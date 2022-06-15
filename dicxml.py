@@ -92,27 +92,33 @@ def dict2xml(xml_d, f_xml):
         f.write(xml_pretty)
 
 
+def xml2val_node(xml_node):
+
+    setup_node = {}
+    for key, val_d in xml_node.items():
+        if val_d['@type'] == 'str':
+            if '#text' in val_d.keys():
+                setup_node[key] = val_d['#text']
+            else:
+                setup_node[key] = ''
+        elif val_d['@type'] == 'bool':
+            if val_d['#text'].lower() == 'true':
+                setup_node[key] = True
+            else:
+                setup_node[key] = False
+        elif val_d['@type'] == 'int':
+            setup_node[key] = int(val_d['#text'])
+        elif val_d['@type'] == 'flt':
+            setup_node[key] = float(val_d['#text'])
+
+    return setup_node
+
+
 def xml2val_dic(xml_d):
 
     setup_d = {}
     for node, xml_node in xml_d.items():
-        setup_d[node] = {}
-        for key, val_d in xml_node.items():
-            if val_d['@type'] == 'str':
-                if '#text' in val_d.keys():
-                    setup_d[node][key] = val_d['#text']
-                else:
-                    setup_d[node][key] = ''
-            elif val_d['@type'] == 'bool':
-                if val_d['#text'].lower() == 'true':
-                    setup_d[node][key] = True
-                else:
-                    setup_d[node][key] = False
-            elif val_d['@type'] == 'int':
-                setup_d[node][key] = int(val_d['#text'])
-            elif val_d['@type'] == 'flt':
-                setup_d[node][key] = float(val_d['#text'])
-
+        setup_d[node] = xml2val_node(xml_node)
     return setup_d
 
 
