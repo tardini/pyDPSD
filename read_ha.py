@@ -26,17 +26,12 @@ def raw2pulse(max_winlen, win_start, pulse_len, rawdata):
         min_tens = 1e8
         for j in range(3):
             pulse2 = np.stack((pulse_odd[j:], pulse_even[:len0-j])).T.ravel()
-            der2 = (pulse2[1:] - pulse2[:-1])**2
-            tension = 0.
-            for x in der2:
-                tension += x
+            tension = np.sum((pulse2[1:] - pulse2[:-1])**2)
             if tension < min_tens:
                 pulse_ok = pulse2
                 min_tens = tension
-
         len_pul = len(pulse_ok)
-        pulses[jwin][: len_pul] = pulse_ok
-
+        pulses[jwin, : len_pul] = pulse_ok
     return pulses
 
 
@@ -70,7 +65,7 @@ class READ_HA:
         self.boundaries = np.append(boundaries, len(data)) # Retain final pulse too, unlike *.bin
         winlen = np.diff(self.boundaries) - 4
 
-        (ind_odd, ) = np.where(winlen %2 == 1)
+        (ind_odd , ) = np.where(winlen %2 == 1)
         (ind_wneg, ) = np.where(winlen < 0)
         logger.debug('Skipped %d pulses with odd window length' , len(ind_odd))
         logger.info('Skipped %d pulses with window length <= 0', len(ind_wneg))
@@ -85,17 +80,18 @@ class READ_HA:
         (ind_neg, ) = np.where(data > 8192)
         data[ind_neg] -= 16384
         data *= -1
-# Entry-inversion observed by Luca Giacomelli
-        n_pulses = len(self.winlen)
 
+        n_pulses = len(self.winlen)
 
         if max_winlen is None:
             max_winlen = np.max(self.winlen)
 
-        logger.info('Reading pulses')
         pulse_len = np.minimum(self.winlen, max_winlen)
 
+# Entry-inversion observed by Luca Giacomelli
+        logger.info('Sorting faulty ADC synchronisation')
         self.pulses = raw2pulse(max_winlen, win_start, pulse_len, data)
+        logger.info('Done sorting ADC')
 
         self.t_events = 1e-8*(np.cumsum(tdiff, dtype=np.float32))[ind_ok]
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
