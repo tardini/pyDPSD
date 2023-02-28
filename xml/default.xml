@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <main>
     <io>
-        <Shots type="str" label="Shots">34571</Shots>
+        <Shots type="str" label="Shots">range(40582, 40585)</Shots>
         <HAfile type="str" label="HA*.dat file"> </HAfile>
-        <SFwrite type="bool" label="Write shotfiles">false</SFwrite>
+        <SFwrite type="bool" label="Write shotfiles">true</SFwrite>
         <SFforce type="bool" label="Force SF write">false</SFforce>
-        <SFexp type="str" label="Shotfile exp">git</SFexp>
+        <SFexp type="str" label="Shotfile exp">AUGD</SFexp>
     </io>
     <setup>
         <TimeBin type="flt" label="Time step">0.001</TimeBin>

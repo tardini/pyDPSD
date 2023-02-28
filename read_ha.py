@@ -24,16 +24,6 @@ def raw2pulse(max_winlen, win_start, pulse_len, rawdata):
         pulse_odd  = pulse[1::2]
         len0 = len(pulse_odd)
         min_tens = 1e8
-        for j in range(1, 3):
-            pulse2 = np.stack((pulse_even[j:], pulse_odd[:len0-j])).T.ravel()
-            der2 = (pulse2[1:] - pulse2[:-1])**2
-            tension = 0.
-            for x in der2:
-                tension += x
-            if tension < min_tens:
-                pulse_ok = pulse2
-                min_tens = tension
-
         for j in range(3):
             pulse2 = np.stack((pulse_odd[j:], pulse_even[:len0-j])).T.ravel()
             der2 = (pulse2[1:] - pulse2[:-1])**2
