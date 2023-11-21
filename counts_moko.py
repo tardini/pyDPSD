@@ -13,11 +13,11 @@ detR_cm = 2.54
 dist_cm = 220.
 geom_fac = np.pi*detR_cm**2/(4.*np.pi*dist_cm**2)
 det_eff = 0.2
-setup_d['setup']['TBeg'] = 0  # Take all events
-setup_d['setup']['TEnd'] = -1 # Take all events
+setup_d['setup']['Start time'] = 0  # Take all events
+setup_d['setup']['End time'] = -1 # Take all events
 for nshot in (101, 102, 103, 104, 105, 107):
     f_ha = '/shares/departments/AUG/users/git/DPSD/acq/1/%d/HA_%d.dat' %(nshot, nshot)
-    setup_d['io']['HAfile'] = f_ha
+    setup_d['io']['HA*.dat file'] = f_ha
 
     dp[nshot] = dpsd_run.DPSD(setup_d)
 
