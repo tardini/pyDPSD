@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import sys, time, os, logging
-import dpsd_run, dicxml
+import sys, time, os, logging, json
+import dpsd_run
 from aug_sfutils import journal, getlastshot, SFREAD
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
@@ -19,9 +19,9 @@ while not firstshot:
         time.sleep(60)
 
 dpsd_dir = os.path.dirname(os.path.realpath(__file__))
-xml_d = dicxml.xml2dict('%s/xml/shot.xml' %dpsd_dir)['main']
-setup_d = dicxml.xml2val_dic(xml_d)
-
+f_json = '%s/xml/shot.xml' %dpsd_dir
+with open(f_json) as fjson:
+    setup_d = json.load(fjson)
 
 if journal.anyshot():
 

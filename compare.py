@@ -1,10 +1,11 @@
+import os, json
 import numpy as np
-import dpsd_run, dicxml
+import dpsd_run
 import matplotlib.pylab as plt
 
-
-xml_d = dicxml.xml2dict('/afs/ipp/home/g/git/python/neutrons/dpsd/xml/default.xml')['main']
-setup_d = dicxml.xml2val_dic(xml_d)
+f_json = 'settings/default.json'
+with open(f_json) as fjson:
+    setup_d = json.load(fjson)
 
 nshot = 29795
 setup_d['io']['Shots'] = nshot

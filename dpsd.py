@@ -4,7 +4,7 @@ __author__  = 'Giovanni Tardini (Tel. +49 89 3299-1898)'
 __version__ = '0.0.1'
 __date__    = '29.03.2022'
 
-import os, sys, logging, webbrowser
+import os, sys, logging, webbrowser, json
 
 try:
     from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
@@ -17,7 +17,7 @@ except:
     qt5 = False
 
 import numpy as np
-import dicxml, dpsd_run, plot_dpsd, plot_pulses
+import dpsd_run, plot_dpsd, plot_pulses
 try:
     import aug_sfutils as sf
 except:
@@ -96,10 +96,10 @@ class DPSD(QMainWindow):
 
         menubar = self.menuBar()
         fileMenu = QMenu('&File', self)
-        xmlMenu  = QMenu('&Setup', self)
+        jsonMenu  = QMenu('&Setup', self)
         helpMenu = QMenu('&Help', self)
         menubar.addMenu(fileMenu)
-        menubar.addMenu(xmlMenu)
+        menubar.addMenu(jsonMenu)
         menubar.addMenu(helpMenu)
 
         runAction  = QAction('&Run'     , fileMenu)
@@ -120,12 +120,12 @@ class DPSD(QMainWindow):
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
 
-        loadAction  = QAction('&Load Setup', xmlMenu)
-        saveAction  = QAction('&Save Setup', xmlMenu)
-        xmlMenu.addAction(loadAction)
-        xmlMenu.addAction(saveAction)
-        loadAction.triggered.connect(self.load_xml)
-        saveAction.triggered.connect(self.save_xml)
+        loadAction  = QAction('&Load Setup', jsonMenu)
+        saveAction  = QAction('&Save Setup', jsonMenu)
+        jsonMenu.addAction(loadAction)
+        jsonMenu.addAction(saveAction)
+        loadAction.triggered.connect(self.load_json)
+        saveAction.triggered.connect(self.save_json)
 
         aboutAction = QAction('&Web docu', helpMenu)
         aboutAction.triggered.connect(self.about)
@@ -156,8 +156,10 @@ class DPSD(QMainWindow):
 
 # User options
 
-        self.xml_d = dicxml.xml2dict('%s/xml/default.xml' %dpsd_dir)['main']
-        self.setup_init = dicxml.xml2val_dic(self.xml_d)
+        f_json = '%s/settings/default.json' %dpsd_dir
+        with open(f_json) as fjson:
+            self.setup_init = json.load(fjson)
+
         self.gui = {}
         for node in self.setup_init.keys():
             self.gui[node] = {}
@@ -165,7 +167,7 @@ class DPSD(QMainWindow):
 
 # Entry widgets
 
-        self.rblists = {'SFexp':['AUGD', os.getenv('USER')]}
+        self.rblists = {'Shotfile exp':['AUGD', os.getenv('USER')]}
 
 #----------
 # I/O files
@@ -174,33 +176,24 @@ class DPSD(QMainWindow):
         jrow = 0
         node = 'io'
 
-        key = 'HAfile'
-        lbl = QLabel(self.xml_d[node][key]['@label'])
-        self.gui[node][key] = QLineEdit(self.setup_init[node][key])
-        input_layout.addWidget(lbl, jrow, 0)
-        input_layout.addWidget(self.gui[node][key], jrow, 1, 1, 3)
-        jrow += 1
+        for key in ('HA*.dat file', 'Shots'):
+            lbl = QLabel(key)
+            self.gui[node][key] = QLineEdit(self.setup_init[node][key])
+            input_layout.addWidget(lbl, jrow, 0)
+            input_layout.addWidget(self.gui[node][key], jrow, 1, 1, 3)
+            jrow += 1
 
-        key = 'Shots'
-        lbl = QLabel(self.xml_d[node][key]['@label'])
-        self.gui[node][key] = QLineEdit(self.setup_init[node][key])
-        input_layout.addWidget(lbl, jrow, 0)
-        input_layout.addWidget(self.gui[node][key], jrow, 1, 1, 3)
-        jrow += 1
-
-        key = 'SFwrite'
+        key = 'Write shotfiles'
         if 'aug_sfutils' in sys.modules:
-            lbl = self.xml_d[node][key]['@label']
-            self.gui[node][key] = QCheckBox(lbl)
+            self.gui[node][key] = QCheckBox(key)
             input_layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
             if self.setup_init[node][key]:
                 self.gui[node][key].setChecked(True)
             jrow += 1
 
-        key = 'SFforce'
+        key = 'Force SF write'
         if 'aug_sfutils' in sys.modules:
-            lbl = self.xml_d[node][key]['@label']
-            self.gui[node][key] = QCheckBox(lbl)
+            self.gui[node][key] = QCheckBox(key)
             input_layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
             if self.setup_init[node][key]:
                 self.gui[node][key].setChecked(True)
@@ -208,11 +201,11 @@ class DPSD(QMainWindow):
 
 # Radiobutton
 
-        key = 'SFexp'
+        key = 'Shotfile exp'
         if 'aug_sfutils' in sys.modules:
             rblist = self.rblists[key]
             self.gui[node][key] = QButtonGroup(self)
-            lbl = QLabel(self.xml_d[node][key]['@label'])
+            lbl = QLabel(key)
             input_layout.addWidget(lbl, jrow, 0)
             for jcol, val in enumerate(rblist):
                 but = QRadioButton(val)
@@ -231,35 +224,38 @@ class DPSD(QMainWindow):
 # Setup
 #------
 
-        entries = ['TimeBin', 'TBeg', 'TEnd', 'ToFWindowLength']
+        entries = ['Time step', 'Start time', 'End time', '#samples for analysis']
         self.new_tab(setup_layout, 'setup', entries=entries)
 
 #-----
 # Peak
 #-----
 
-        cb = ['SubtBaseline']
-        entries = ['BaselineStart', 'BaselineEnd', 'Threshold', \
-            'Front', 'Tail', 'SaturationHigh', 'SaturationLow', \
-            'LongGate', 'ShortGate', 'MaxDifference']
+        cb = ['Subtract baseline']
+        entries = ['Baseline start', 'Baseline end', 'Threshold', \
+            'Front', 'Tail', 'Saturation upper limit', 'Saturation lower limit', \
+            'Long gate', 'Short gate', 'Maximum difference']
         self.new_tab(peak_layout, 'peak', entries, checkbuts=cb)
 
 #-----------
 # Separation
 #-----------
 
-        entries = ['Marker', 'PH_nChannels', 'PS_nChannels', \
-            'DDlower', 'DDupper', 'DTlower', 'DTupper', \
-            'Slope1', 'Slope2', 'Offset', 'LineChange']
+        entries = ['Marker', '#bins Pulse Height', '#bins Pulse Shape', \
+            'Lower PH-limit for DD', 'Upper PH-limit for DD', \
+            'Lower PH-limit for DT', 'Upper PH-limit for DT', \
+            'Slope of 1st sep.line', 'Slope of 2nd sep.line', 'Offset of 1st sep.line', \
+            'Bin line1 -> line2']
         self.new_tab(sep_layout, 'separation', entries)
 
 #---------------
 # LED correction
 #---------------
 
-        cb = ['LEDcorrection']
-        entries = ['LEDdt', 'LEDFront', 'LEDTail', 'LEDreference', \
-            'LEDxmin', 'LEDxmax', 'LEDymin', 'LEDymax']
+        cb = ['LED correction']
+        entries = ['LED time sampling', 'LED front', 'LED tail', 'LED reference bin', \
+                   'Min PS bin for LED detection', 'Max PS bin for LED detection', \
+                   'Min PH bin for LED detection', 'Max PH bin for LED detection']
         self.new_tab(led_layout, 'led', entries, checkbuts=cb)
 
         self.setStyleSheet("QLabel { width: 4 }")
@@ -279,8 +275,7 @@ class DPSD(QMainWindow):
 
         jrow = 0
         for key in checkbuts:
-            lbl = self.xml_d[node][key]['@label']
-            self.gui[node][key] = QCheckBox(lbl)
+            self.gui[node][key] = QCheckBox(key)
             layout.addWidget(self.gui[node][key], jrow, 0, 1, 2)
             if self.setup_init[node][key]:
                 self.gui[node][key].setChecked(True)
@@ -288,8 +283,7 @@ class DPSD(QMainWindow):
 
         for key in entries:
             val = self.setup_init[node][key]
-            lbl = self.xml_d[node][key]['@label']
-            qlbl = QLabel(lbl)
+            qlbl = QLabel(key)
             qlbl.setFixedWidth(200)
             self.gui[node][key] = QLineEdit(str(val))
             self.gui[node][key].setFixedWidth(90)
@@ -307,12 +301,12 @@ class DPSD(QMainWindow):
         layout.setColumnStretch(layout.columnCount(), 1)
 
 
-    def gui2xmld(self):
-        '''Returns a dic of the xml-type, #text and @attr'''
-        dpsd_dic = {}
-        for node in self.gui.keys():
-            dpsd_dic[node] = self.get_gui_tab(node)
-        return dpsd_dic
+    def gui2json(self):
+
+        json_d = {}
+        for node, val in self.gui.items():
+            json_d[node] = self.get_gui_tab(node)
+        return json_d
 
 
     def get_gui_tab(self, node):
@@ -321,83 +315,74 @@ class DPSD(QMainWindow):
         for key, val in self.gui[node].items():
             node_dic[key] = {}
             if isinstance(val, QLineEdit):
-                node_dic[key]['#text'] = val.text()
-            elif isinstance(val, QCheckBox):
-                if val.isChecked():
-                    node_dic[key]['#text'] = 'true'
+                if isinstance(self.setup_init[node][key], int):
+                    node_dic[key] = int(val.text())
+                elif isinstance(self.setup_init[node][key], float):
+                    node_dic[key] = float(val.text())
                 else:
-                    node_dic[key]['#text'] = 'false'
+                    node_dic[key] = val.text()
+            elif isinstance(val, QCheckBox):
+                node_dic[key] = val.isChecked()
             elif isinstance(val, QButtonGroup):
                 bid = val.checkedId()
-                node_dic[key]['#text'] = self.rblists[key][bid]
-            node_dic[key]['@type' ] = self.xml_d[node][key]['@type']
-            node_dic[key]['@label'] = self.xml_d[node][key]['@label']
+                node_dic[key] = self.rblists[key][bid]
 
         return node_dic
 
 
-    def set_gui(self, xml_d):
+    def set_gui(self, json_d):
 
-        for node, val1 in xml_d.items():
+        for node, val1 in json_d.items():
             for key, vald in val1.items():
                 if key not in self.gui[node].keys():
                     continue
-                if '#text' in vald.keys():
-                    val = vald['#text']
-                else:
-                    val = ''
-                val = val.strip()
-                val_low = val.lower()
                 widget = self.gui[node][key]
                 if isinstance(widget, QCheckBox):
-                    if val_low == 'false':
-                        widget.setChecked(False)
-                    elif val_low == 'true':
-                        widget.setChecked(True)
+                    widget.setChecked(vald)
                 elif isinstance(widget, QButtonGroup):
                     for but in widget.buttons():
-                        if but.text().lower() == val_low:
+                        if but.text() == vald:
                             but.setChecked(True)
                 elif isinstance(widget, QLineEdit):
-                    if val_low == '':
-                        widget.setText(' ')
-                    else:
-                        widget.setText(val)
+                    if vald:
+                        widget.setText(str(vald))
                 elif isinstance(widget, QComboBox):
                     for index in range(widget.count()):
-                        if widget.itemText(index).strip() == val.strip():
+                        if widget.itemText(index).strip() == vald.strip():
                             widget.setCurrentIndex(index)
                             break
 
 
-    def load_xml(self):
+    def load_json(self):
 
         ftmp = QFileDialog.getOpenFileName(self, 'Open file', \
-            '%s/xml' %dpsd_dir, "xml files (*.xml)")
+            '%s/settings' %dpsd_dir, "json files (*.json)")
         if qt5:
-            fxml = ftmp[0]
+            f_json = ftmp[0]
         else:
-            fxml = str(ftmp)
-        setup_d = dicxml.xml2dict(fxml)
-        self.set_gui(setup_d['main'])
+            f_json = str(ftmp)
+
+        with open(f_json) as fjson:
+            setup_d = json.load(fjson)
+        self.set_gui(setup_d)
 
 
-    def save_xml(self):
+    def save_json(self):
 
-        out_dic = {}
-        out_dic['main'] = self.gui2xmld()
+        out_dic = self.gui2json()
         ftmp = QFileDialog.getSaveFileName(self, 'Save file', \
-            '%s/xml' %dpsd_dir, "xml files (*.xml)")
+            '%s/settings' %dpsd_dir, "json files (*.json)")
         if qt5:
-            fxml = ftmp[0]
+            f_json = ftmp[0]
         else:
-            fxml = str(ftmp)
-        dicxml.dict2xml(out_dic, fxml)
+            f_json = str(ftmp)
+        with open(f_json, 'w') as fjson:
+            fjson.write(json.dumps(out_dic))
 
 
     def run(self):
 
-        dpsd_dic = dicxml.xml2val_dic(self.gui2xmld())
+        dpsd_dic = self.gui2json()
         self.dp = dpsd_run.DPSD(dpsd_dic)
         logger.info('Done calculation')
 
