@@ -19,7 +19,7 @@ while not firstshot:
         time.sleep(60)
 
 dpsd_dir = os.path.dirname(os.path.realpath(__file__))
-f_json = '%s/xml/shot.xml' %dpsd_dir
+f_json = '%s/settings/shot.xml' %dpsd_dir
 with open(f_json) as fjson:
     setup_d = json.load(fjson)
 
