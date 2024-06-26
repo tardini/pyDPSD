@@ -7,13 +7,13 @@ __date__    = '29.03.2022'
 import os, sys, logging, webbrowser, json
 
 try:
-    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
-    from PyQt5.QtGui import QPixmap, QIcon, QIntValidator, QDoubleValidator
+    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
+    from PyQt5.QtGui import QPixmap, QIcon
     from PyQt5.QtCore import Qt, QRect, QSize
     qt5 = True
 except:
-    from PyQt4.QtCore import Qt, QRect, QSize, QIntValidator, QDoubleValidator
-    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
+    from PyQt4.QtCore import Qt, QRect, QSize
+    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
     qt5 = False
 
 import numpy as np
@@ -288,11 +288,13 @@ class DPSD(QMainWindow):
             self.gui[node][key] = QLineEdit(str(val))
             self.gui[node][key].setFixedWidth(90)
             if isinstance(val, int):
-                valid = QIntValidator()
-                self.gui[node][key].setValidator(valid)
+                self.gui[node][key] = QSpinBox()
+                self.gui[node][key].setRange(-int(1e3), int(1e7))
+                self.gui[node][key].setValue(val)
             elif isinstance(val, float):
-                valid = QDoubleValidator()
-                self.gui[node][key].setValidator(valid)
+                self.gui[node][key] = QDoubleSpinBox()
+                self.gui[node][key].setRange(-1000., 1000.)
+                self.gui[node][key].setValue(val)
             layout.addWidget(qlbl         , jrow, 0)
             layout.addWidget(self.gui[node][key], jrow, 1)
             jrow += 1
