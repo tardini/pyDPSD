@@ -294,6 +294,7 @@ class DPSD(QMainWindow):
             elif isinstance(val, float):
                 self.gui[node][key] = QDoubleSpinBox()
                 self.gui[node][key].setRange(-1000., 1000.)
+                self.gui[node][key].setDecimals(4)
                 self.gui[node][key].setValue(val)
             layout.addWidget(qlbl         , jrow, 0)
             layout.addWidget(self.gui[node][key], jrow, 1)
@@ -317,12 +318,11 @@ class DPSD(QMainWindow):
         for key, val in self.gui[node].items():
             node_dic[key] = {}
             if isinstance(val, QLineEdit):
-                if isinstance(self.setup_init[node][key], int):
-                    node_dic[key] = int(val.text())
-                elif isinstance(self.setup_init[node][key], float):
-                    node_dic[key] = float(val.text())
-                else:
-                    node_dic[key] = val.text()
+                node_dic[key] = val.text()
+            elif isinstance(val, QSpinBox):
+                node_dic[key] = int(val.text())
+            elif isinstance(val, QDoubleSpinBox):
+                node_dic[key] = float(val.text())
             elif isinstance(val, QCheckBox):
                 node_dic[key] = val.isChecked()
             elif isinstance(val, QButtonGroup):

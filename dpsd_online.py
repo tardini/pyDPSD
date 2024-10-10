@@ -2,9 +2,7 @@
 
 import sys, time, os, logging, json
 import dpsd_run
-from aug_sfutils import journal, SFREAD
-
-JOU = journal.JOURNAL()
+import aug_sfutils as sf
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 hnd = logging.StreamHandler()
@@ -20,15 +18,14 @@ with open(f_json) as fjson:
 
 hour = 0
 while (hour < 19):
-
     loctime = time.localtime(time.time())
     hour = loctime[3]
     logger.info('Waiting for next shot')
     logger.info('ctrl+c to terminate the script')
 
-    lastshot = JOU.wait4nextShot()
+    lastshot = sf.wait4shot()
     try:
-        nsp = SFREAD(lastshot, 'NSP')
+        nsp = sf.SFREAD(lastshot, 'NSP')
         if nsp.status:
             logger.warning('NSP shotfile for shot %d exists already, writing no new shotfile' %nshot)
         else:

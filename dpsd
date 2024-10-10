@@ -3,6 +3,7 @@
 source /etc/profile.d/modules.sh
 
 module purge
-module load anaconda aug_sfutils
+module load aug_sfutils
 
-/afs/ipp/home/g/git/python/neutrons/dpsd/dpsd.py
+rootdir=`dirname $0`        # may be relative path
+$rootdir/dpsd.py
