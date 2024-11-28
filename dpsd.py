@@ -9,7 +9,7 @@ import os, sys, logging, webbrowser, json
 try:
     from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
     from PyQt5.QtGui import QPixmap, QIcon
-    from PyQt5.QtCore import Qt, QRect, QSize
+    from PyQt5.QtCore import Qt, QRect, QSize, QLocale
     qt5 = True
 except:
     from PyQt4.QtCore import Qt, QRect, QSize
@@ -24,6 +24,8 @@ except:
     pass
 
 os.environ['BROWSER'] = '/usr/bin/firefox'
+
+locale = QLocale('us')
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 hnd = logging.StreamHandler()
@@ -44,6 +46,8 @@ class DPSD(QMainWindow):
             super().__init__()
         else:
             super(QMainWindow, self).__init__()
+
+        self.setLocale(locale)
 
         xwin  = 603
         yhead = 44

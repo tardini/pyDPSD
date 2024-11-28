@@ -100,7 +100,8 @@ def fig_phs(dpsd, color='#c00000', ymax=2, titles=None):
     fig_phs = plt.figure(figsize=fig_size, dpi=100)
 
     fig_phs.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.92, hspace=0, wspace=0.28)
-    fig_phs.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
+    if hasattr(dpsd, 'nshot'):
+        fig_phs.text(.5, .95, '#%d' %dpsd.nshot, ha='center')
 
     ymax = 0
     for spec in ['neut1', 'gamma1', 'led', 'DT']:

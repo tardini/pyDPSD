@@ -164,6 +164,8 @@ class DPSD:
                 self.nshot = int(nshot)
                 shot100 = self.nshot//100
                 filepath = '/shares/experiments/aug-rawfiles/NSP/%d/%d' %(shot100, self.nshot)
+                if not os.path.exists(filepath):
+                    filepath = '/shares/experiments/aug-rawfiles/NSP/%d' %shot100
                 HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
                 self.HAfile = HAfile
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
