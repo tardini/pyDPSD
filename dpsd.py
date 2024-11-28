@@ -12,7 +12,7 @@ try:
     from PyQt5.QtCore import Qt, QRect, QSize, QLocale
     qt5 = True
 except:
-    from PyQt4.QtCore import Qt, QRect, QSize
+    from PyQt4.QtCore import Qt, QRect, QSize, QLocale
     from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
     qt5 = False
 
@@ -25,7 +25,7 @@ except:
 
 os.environ['BROWSER'] = '/usr/bin/firefox'
 
-locale = QLocale('us')
+usLocale = QLocale('us')
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 hnd = logging.StreamHandler()
@@ -47,7 +47,7 @@ class DPSD(QMainWindow):
         else:
             super(QMainWindow, self).__init__()
 
-        self.setLocale(locale)
+        self.setLocale(usLocale)
 
         xwin  = 603
         yhead = 44
