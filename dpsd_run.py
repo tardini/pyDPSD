@@ -1,4 +1,4 @@
-import sys, os, logging
+import sys, os, logging, time
 
 import numpy as np
 import numba as nb
@@ -17,13 +17,11 @@ dpsd_dir = os.path.dirname(os.path.realpath(__file__))
 
 @nb.njit
 def slice_trapz(a, bnd_l, bnd_r):
-    b = np.zeros(a.shape[0])
+    b = np.empty(a.shape[0])
     for j in range(a.shape[0]):
-        for i in range(bnd_l[j]+1, bnd_r[j]-1):
-            b[j] += a[j, i]
+        b[j] = np.sum(a[j, bnd_l[j]+1: bnd_r[j]-1])
         b[j] += 0.5*(a[j, bnd_l[j]] + a[j, bnd_r[j]-1])
     return b
-
 
 @nb.njit
 def led_correction(dtled, dxCh, led_ref, time, totalintegral, flg_led):
@@ -72,15 +70,9 @@ def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, max_lg):
         if pulse_basestart[jpul] >= maxpos[jpul]:
             newpulse_len = pulse_len[jpul] - blstart_h
         else:
-            aver1 = 0.
-            for i in range(bl_start):
-                aver1 += pulse[i]
-            aver1 /= float(bl_start)
+            aver1 = np.mean(pulse[:bl_start])
             for j in range(maxpos[jpul], pulse_basestart[jpul]):
-                aver2 = 0.
-                for i in range(j, j + bl_start):
-                    aver2 += pulse[i]
-                aver2 /= float(bl_start)
+                aver2 = np.mean(pulse[j: j+bl_start])
                 if np.abs(aver2 - aver1) < max_diff:
                     if max_lg[jpul] > j + blstart_h:
                         newpulse_len = max_lg[jpul]
@@ -89,7 +81,6 @@ def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, max_lg):
                     break
                 if (j == pulse_basestart[jpul] - 1) :
                     newpulse_len = pulse_len[jpul] - blstart_h
-
         for j in range(1, newpulse_len-1):
             totalintegral[jpul] += pulse[j]
         totalintegral[jpul] += 0.5*(pulse[0] + pulse[newpulse_len-1])
@@ -99,16 +90,11 @@ def BaselineCond2(bl_start, max_diff, pulses, pulse_len, maxpos, max_lg):
 
 @nb.njit
 def Baseline(basestart, baseend, pulse_len, pulses):
-
     n_pulses = pulses.shape[0]
     pulse_baseend = pulse_len - baseend
-    baseline = np.zeros(n_pulses, dtype=np.float32)
+    baseline = np.sum(pulses[:, :basestart], axis=1)
     for jpul in range(n_pulses):
-# Baseline subtraction
-        nind = 0
-        for j in range(basestart):
-            baseline[jpul] += pulses[jpul, j]
-            nind += 1
+        nind = basestart
         for j in range(pulse_baseend[jpul], pulse_len[jpul]):
             if j >= basestart:
                 baseline[jpul] += pulses[jpul, j]
@@ -118,10 +104,8 @@ def Baseline(basestart, baseend, pulse_len, pulses):
 
 @nb.njit
 def PileUpDet(nfront, ntail, nthres, front_led, tail_led, flags, pulses):
-
     n_pulses, pulse_len = pulses.shape
     flg_peaks = np.zeros(n_pulses, dtype=np.int32)
-
     for jpul, flg in enumerate(flags):
         pulse = pulses[jpul]
         if flg:
@@ -139,8 +123,6 @@ def PileUpDet(nfront, ntail, nthres, front_led, tail_led, flags, pulses):
                 flg_peaks[jpul] += 1
                 jt += pulse_width
             jt += 1
-        flg_peaks[jpul] 
-
     return flg_peaks
 
 
@@ -217,7 +199,6 @@ class DPSD:
         pulses = ha.pulses[tind]
 
 # Initialise
-        flg_sat   = np.zeros(n_pulses)
         self.flg_peaks = np.zeros(n_pulses)
 
 # =========== 
@@ -238,7 +219,7 @@ class DPSD:
         sat_low  = float(self.setup['peak']['Saturation lower limit'])
         pulse_len = np.minimum(self.winlen, tof_win_len)
         pulse_baseend = pulse_len - self.setup['peak']['Baseline end']
-        
+
         logger.info('Baseline subtraction')
         self.pulses = pulses.astype(np.float32)
         baseline = Baseline(self.setup['peak']['Baseline start'], self.setup['peak']['Baseline end'], pulse_len, self.pulses)
@@ -247,7 +228,8 @@ class DPSD:
 # Saturation detection
         logger.info('Saturation detection')
         (ind_sat_high, ) = np.where(np.max(self.pulses, axis=1) > sat_high)
-        (ind_sat_low, )  = np.where(np.min(self.pulses, axis=1) < sat_low) 
+        (ind_sat_low, )  = np.where(np.min(self.pulses, axis=1) < sat_low )
+        flg_sat   = np.zeros(n_pulses)
         flg_sat[ind_sat_high] = 1
         flg_sat[ind_sat_low]  = 2
 
@@ -270,7 +252,7 @@ class DPSD:
             (self.PulseHeight > float(self.setup['led']['Min PH bin for LED detection'])) & \
             (self.PulseHeight < float(self.setup['led']['Max PH bin for LED detection'])) & \
             (self.PulseShape  > float(self.setup['led']['Min PS bin for LED detection'])) & \
-            (self.PulseShape  < float(self.setup['led']['Max PS bin for LED detection'])) 
+            (self.PulseShape  < float(self.setup['led']['Max PS bin for LED detection']))
 
         logger.info('Pile-up detection')
 

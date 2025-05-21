@@ -1,6 +1,7 @@
 import os, logging
 import numpy as np
 import numba as nb
+from numba.typed import List
 
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 logger = logging.getLogger('read_HA')
@@ -11,28 +12,41 @@ logger.setLevel(logging.INFO)
 
 
 @nb.njit
+def minTension(pulse_in):
+    pulse_even = np.ascontiguousarray(pulse_in[:-1:2])
+    pulse_odd  = np.ascontiguousarray(pulse_in[1::2])
+    len0 = len(pulse_odd)
+    min_tens = 1e8
+    pulse_ok = np.empty(0, dtype=pulse_in.dtype)
+    jmin = -1
+    for j in range(3):
+        N = len0 - j
+        pulse2 = np.empty(2 * N, dtype=pulse_in.dtype)
+        pulse2[0::2] = pulse_odd[j:]
+        pulse2[1::2] = pulse_even[:N]
+        tension = np.sum((pulse2[1:] - pulse2[:-1])**2)
+        if tension < min_tens:
+            pulse_ok = pulse2
+            min_tens = tension
+            jmin = j
+    return jmin, pulse_ok
+
+@nb.njit
 def raw2pulse(max_winlen, win_start, pulse_len, rawdata):
-
     win_end = win_start + pulse_len
-    pulses = np.zeros((win_start.shape[0], max_winlen))
-
+    n_pulses = win_start.shape[0]
+    pulses = np.zeros((n_pulses, max_winlen))
+    indBad = List()
 # Determine shift using a minimum-derivative**2 approach, pulse by pulse
-
-    for jwin, jpos in enumerate(win_start):
+    for jwin in range(n_pulses):
+        jpos = win_start[jwin]
         pulse = rawdata[jpos : win_end[jwin]]
-        pulse_even = pulse[:-1:2]
-        pulse_odd  = pulse[1::2]
-        len0 = len(pulse_odd)
-        min_tens = 1e8
-        for j in range(3):
-            pulse2 = np.stack((pulse_odd[j:], pulse_even[:len0-j])).T.ravel()
-            tension = np.sum((pulse2[1:] - pulse2[:-1])**2)
-            if tension < min_tens:
-                pulse_ok = pulse2
-                min_tens = tension
+        jmin, pulse_ok = minTension(pulse)
+        if jmin > 0:
+            indBad.append(jwin)
         len_pul = len(pulse_ok)
         pulses[jwin, : len_pul] = pulse_ok
-    return pulses
+    return indBad, pulses
 
 
 class READ_HA:
@@ -56,8 +70,10 @@ class READ_HA:
 
         logger.info('Getting t_diff and win_len')
         data1 = data + 1
-        (boundaries, ) = np.where( (data[:-3] >= 0) & (data[:-3] < 3) & \
-            (data[2:-1] < 3) & (data[2:-1] >= 0) & (data1[1:-2] == data[3:]) )
+        (boundaries, ) = np.where(
+            np.isin(data[ :-3], [0, 1, 2]) & \
+            np.isin(data[2:-1], [0, 1, 2]) & \
+            (data1[1:-2] == data[3:]) )
 
         data32 = data.astype(np.uint32)
         tdiff = data32[boundaries + 3] + data32[boundaries]*32768
@@ -90,9 +106,16 @@ class READ_HA:
 
 # Entry-inversion observed by Luca Giacomelli
         logger.info('Sorting faulty ADC synchronisation')
-        self.pulses = raw2pulse(max_winlen, win_start, pulse_len, data)
-        logger.info('Done sorting ADC')
+        indBad, self.pulses = raw2pulse(max_winlen, win_start, pulse_len, data)
+        n_sorted = len(indBad)
+        logger.info('Sorted ADC for %d points out of %d', n_sorted, win_start.shape[0])
 
         self.t_events = 1e-8*(np.cumsum(tdiff, dtype=np.float32))[ind_ok]
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
         logger.debug('%d', len(self.pulses))
+
+#        import matplotlib.pylab as plt
+#        jbad = indBad[0]
+#        plt.plot(data[win_start[jbad]: win_start[jbad] + pulse_len[jbad]])
+#        plt.plot(self.pulses[jbad, :])
+#        plt.show()

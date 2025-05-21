@@ -1,7 +1,7 @@
 {
-    "io": {"Shots": "range(40582, 40585)", "HA*.dat file": "", "Write shotfiles": true, "Force SF write": false, "Shotfile exp": "AUGD"},
-    "setup": { "Time step": 0.001, "Start time": 0, "End time": 20, "#samples for analysis": 50},
+    "io": {"HA*.dat file": "", "Shots": "range(40582, 40585)", "Write shotfiles": true, "Force SF write": false, "Shotfile exp": "AUGD"},
+    "setup": {"Time step": 0.001, "Start time": 0.0, "End time": 20.0, "#samples for analysis": 50},
     "peak": {"Subtract baseline": true, "Baseline start": 7, "Baseline end": 0, "Threshold": 10, "Front": 6, "Tail": 6, "Saturation upper limit": 8190, "Saturation lower limit": -100, "Long gate": 14, "Short gate": 3, "Maximum difference": 20},
-    "separation": {"Marker": 49000, "#bins Pulse Height": 4096, "#bins Pulse Shape": 1024, "Lower PH-limit for DD", "Upper PH-limit for DD": 340, "Lower PH-limit for DT": 500, "Upper PH-limit for DT": 4095, "Slope of 1st sep.line": 0.15, "Slope of 2nd sep.line": 0.023, "Offset of 1st sep.line": 560, "Bin line1-&gt;line2": 350},
-    "led": {"LED front": 6, "LED tail": 6, "LED correction": true, "LED reference bin": 3500, "Min PH bin for LED detection": 2000, "Max PH bin for LED detection": 10000, "Min PS bin for LED detection": 85, "Max PS bin for LED detection": 350, "LED time sampling": 0.02}
+    "separation": {"Marker": 49000, "#bins Pulse Height": 4096, "#bins Pulse Shape": 1024, "Lower PH-limit for DD": 28, "Upper PH-limit for DD": 340, "Lower PH-limit for DT": 500, "Upper PH-limit for DT": 4095, "Slope of 1st sep.line": 0.15, "Slope of 2nd sep.line": 0.023, "Offset of 1st sep.line": 560, "Bin line1 -> line2": 350},
+    "led": {"LED correction": true, "LED time sampling": 0.02, "LED front": 6, "LED tail": 6, "LED reference bin": 3500, "Min PS bin for LED detection": 85, "Max PS bin for LED detection": 350, "Min PH bin for LED detection": 2000, "Max PH bin for LED detection": 10000}
 }
