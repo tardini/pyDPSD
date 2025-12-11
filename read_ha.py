@@ -31,21 +31,25 @@ def minTension(pulse_in):
             jmin = j
     return jmin, pulse_ok
 
+
 @nb.njit
 def raw2pulse(max_winlen, win_start, pulse_len, rawdata):
-    win_end = win_start + pulse_len
     n_pulses = win_start.shape[0]
-    pulses = np.zeros((n_pulses, max_winlen))
-    indBad = List()
-# Determine shift using a minimum-derivative**2 approach, pulse by pulse
+    pulses = np.zeros((n_pulses, max_winlen), dtype=rawdata.dtype)
+    indBad = List.empty_list(nb.int64)
+    max_pulse_len = np.max(pulse_len)
+    pulse_buf = np.empty(max_pulse_len, dtype=rawdata.dtype)
     for jwin in range(n_pulses):
-        jpos = win_start[jwin]
-        pulse = rawdata[jpos : win_end[jwin]]
-        jmin, pulse_ok = minTension(pulse)
+        j0 = win_start[jwin]
+        L  = pulse_len[jwin]
+        for k in range(L):
+            pulse_buf[k] = rawdata[j0 + k]
+        jmin, pulse_ok = minTension(pulse_buf[:L])
         if jmin > 0:
             indBad.append(jwin)
-        len_pul = len(pulse_ok)
-        pulses[jwin, : len_pul] = pulse_ok
+        out_len = pulse_ok.shape[0]
+        for k in range(out_len):
+            pulses[jwin, k] = pulse_ok[k]
     return indBad, pulses
 
 
@@ -83,7 +87,7 @@ class READ_HA:
 
         (ind_odd , ) = np.where(winlen %2 == 1)
         (ind_wneg, ) = np.where(winlen < 0)
-        logger.debug('Skipped %d pulses with odd window length' , len(ind_odd))
+        logger.debug('Skipped %d pulses with odd window length', len(ind_odd))
         logger.info('Skipped %d pulses with window length <= 0', len(ind_wneg))
 
         (ind_ok, ) = np.where((winlen %2 == 0) & (winlen > min_winlen))
@@ -113,9 +117,3 @@ class READ_HA:
         self.t_events = 1e-8*(np.cumsum(tdiff, dtype=np.float32))[ind_ok]
         logger.debug('Min winlen %d %d', np.min(winlen), np.min(self.winlen)) 
         logger.debug('%d', len(self.pulses))
-
-#        import matplotlib.pylab as plt
-#        jbad = indBad[0]
-#        plt.plot(data[win_start[jbad]: win_start[jbad] + pulse_len[jbad]])
-#        plt.plot(self.pulses[jbad, :])
-#        plt.show()

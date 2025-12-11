@@ -3,7 +3,7 @@
 source /etc/profile.d/modules.sh
 
 module purge
-module load aug_sfutils
+module load aug_sfutils/tok/0.9.3
 
 rootdir=`dirname $0`        # may be relative path
 $rootdir/dpsd.py
