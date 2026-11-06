@@ -6,18 +6,11 @@ __date__    = '29.03.2022'
 
 import os, sys, logging, webbrowser, json
 
-try:
-    from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
-    from PyQt5.QtGui import QPixmap, QIcon
-    from PyQt5.QtCore import Qt, QRect, QSize, QLocale
-    qt5 = True
-except:
-    from PyQt4.QtCore import Qt, QRect, QSize, QLocale
-    from PyQt4.QtGui import QPixmap, QIcon, QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
-    qt5 = False
-
+from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QGridLayout, QMenu, QAction, QLabel, QPushButton, QLineEdit, QCheckBox, QSpinBox, QDoubleSpinBox, QFileDialog, QRadioButton, QButtonGroup, QTabWidget, QVBoxLayout
+from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtCore import Qt, QRect, QSize, QLocale
 import numpy as np
-import dpsd_run, plot_dpsd, plot_pulses
+import dpsdRun, dpsd_run, plot_dpsd, plot_pulses
 try:
     import aug_sfutils as sf
 except:
@@ -30,7 +23,7 @@ usLocale = QLocale('us')
 fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
 hnd = logging.StreamHandler()
 hnd.setFormatter(fmt)
-logger = logging.getLogger('DPSD_GUI')
+logger = logging.getLogger('dpsd')
 logger.addHandler(hnd)
 logger.setLevel(logging.INFO)
 
@@ -160,7 +153,7 @@ class DPSD(QMainWindow):
 
 # User options
 
-        f_json = '%s/settings/default.json' %dpsd_dir
+        f_json = '%s/settings/default2.json' %dpsd_dir
         with open(f_json) as fjson:
             self.setup_init = json.load(fjson)
 
@@ -363,10 +356,7 @@ class DPSD(QMainWindow):
 
         ftmp = QFileDialog.getOpenFileName(self, 'Open file', \
             '%s/settings' %dpsd_dir, "json files (*.json)")
-        if qt5:
-            f_json = ftmp[0]
-        else:
-            f_json = str(ftmp)
+        f_json = ftmp[0]
 
         with open(f_json) as fjson:
             setup_d = json.load(fjson)
@@ -389,6 +379,7 @@ class DPSD(QMainWindow):
     def run(self):
 
         dpsd_dic = self.gui2json()
+#        self.dp = dpsdRun.DPSD(dpsd_dic)
         self.dp = dpsd_run.DPSD(dpsd_dic)
         logger.info('Done calculation')
 
@@ -430,7 +421,7 @@ class DPSD(QMainWindow):
         if hasattr(self, 'dp'):
             dic = self.get_gui_tab('io')
             if self.dp.status:
-                self.dp.sfwrite(exp=dic['SFexp'], force=dic['SFforce'])
+                self.dp.sfwrite(exp=dic['Shotfile exp'], force=dic['Force SF write'])
         else:
             logger.error('Run DPSD first, then write Shotfile')
 

@@ -126,9 +126,9 @@ def fig_cnt(dpsd, color='#c00000', ymax=2, titles=None):
 
     ymax = 0
     for spec in ['neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup', 'DD', 'DT']:
-        plt.plot(dpsd.time_cnt, dpsd.cnt[spec], label=spec)
+        plt.plot(dpsd.cnt['time'], dpsd.cnt[spec], label=spec)
         ymax = max(ymax, np.max(dpsd.cnt[spec]))
-    plt.xlim([dpsd.time_cnt[0], dpsd.time_cnt[-1]])
+    plt.xlim([dpsd.cnt['time'][0], dpsd.cnt['time'][-1]])
     plt.ylim([0, ymax])
     plt.xlabel('Time [s]')
     plt.ylabel('Count rate [1/s]')

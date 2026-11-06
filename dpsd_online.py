@@ -24,6 +24,7 @@ while (hour < 19):
     logger.info('ctrl+c to terminate the script')
 
     lastshot = sf.wait4shot()
+#    lastshot = sf.wait4nextShot()
     try:
         nsp = sf.SFREAD(lastshot, 'NSP')
         if nsp.status:

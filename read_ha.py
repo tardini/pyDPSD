@@ -60,13 +60,13 @@ class READ_HA:
 
         self.status = True
         logger.info('Reading binary %s', fin)
-        fmd5 = fin + '.md5'
-        if not os.path.isfile(fin):
+        fmd5 = fin.parent / (fin.name + '.md5')
+        if not fin.is_file():
             logger.error('File %s not found', fin)
             self.status = False
             return
         if check_md5:
-            if not os.path.isfile(fmd5): # ensures integrity of fin
+            if not fmd5.is_file(): # ensures integrity of fin
                 logger.error('File %s not found', fmd5)
                 self.status = False
                 return

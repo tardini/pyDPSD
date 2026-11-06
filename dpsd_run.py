@@ -3,17 +3,12 @@ import sys, os, logging, time
 import numpy as np
 import numba as nb
 import read_ha
+from pathlib import Path
 
+logger = logging.getLogger('dpsd.run')
 
-fmt = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s: %(message)s', '%H:%M:%S')
-logger = logging.getLogger('DPSD')
-hnd = logging.StreamHandler()
-hnd.setFormatter(fmt)
-logger.addHandler(hnd)
-logger.setLevel(logging.DEBUG)
-
-sig1d = ['neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup']
-dpsd_dir = os.path.dirname(os.path.realpath(__file__))
+sig1d = ['time', 'neut1', 'neut2', 'gamma1', 'gamma2', 'led', 'pileup']
+dpsd_dir = Path(__file__).resolve().parent
 
 @nb.njit
 def slice_trapz(a, bnd_l, bnd_r):
@@ -129,7 +124,7 @@ def PileUpDet(nfront, ntail, nthres, front_led, tail_led, flags, pulses):
 class DPSD:
 
 
-    def __init__(self, dic_in, t_ranges=None):
+    def __init__(self, dic_in, t_ranges=None, nesp_root=Path('/shares/experiments/aug-rawfiles/NSP')):
 
         self.status = True
 
@@ -137,19 +132,16 @@ class DPSD:
         io_d = dic_in['io']
         HAfile = io_d['HA*.dat file'].strip()
         if HAfile != '':
-            self.HAfile = HAfile
-            self.run(HAfile, t_ranges=t_ranges)
+            self.run(Path(HAfile), t_ranges=t_ranges)
         else:
             n_shots = np.atleast_1d(eval(str(io_d['Shots'])))
             for nshot in n_shots:
                 logger.info(nshot)
                 self.nshot = int(nshot)
-                shot100 = self.nshot//100
-                filepath = '/shares/experiments/aug-rawfiles/NSP/%d/%d' %(shot100, self.nshot)
-                if not os.path.exists(filepath):
-                    filepath = '/shares/experiments/aug-rawfiles/NSP/%d' %shot100
-                HAfile = '%s/HA_%d.dat' %(filepath, self.nshot)
-                self.HAfile = HAfile
+                shot100 = self.nshot // 100
+                HAfile = nesp_root / str(shot100) / str(nshot) / f'HA_{nshot}.dat'
+                if not HAfile.is_file():
+                    HAfile = nesp_root / str(shot100) / f'HA_{nshot}.dat'
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
                 if 'Write shotfiles' in io_d.keys():
                     if self.status and io_d['Write shotfiles']:
@@ -186,13 +178,13 @@ class DPSD:
                 self.dt += t_ran[1] - t_ran[0]
 
         self.time = ha.t_events[tind]
-        logger.info('Start time = %8.4f' %self.time[0]) 
-        logger.info('End time = %8.4f' %self.time[-1]) 
+        logger.info('Start time = %8.4f', self.time[0]) 
+        logger.info('End time = %8.4f', self.time[-1]) 
         n_pulses = len(self.time)
         n_timebins = int((self.time[-1] - self.time[0])/self.setup['setup']['Time step'])
         n_led = int((self.time[-1] - self.time[0])/self.setup['led']['LED time sampling'])
 
-        self.time_cnt = self.time[0] + self.setup['setup']['Time step']*(0.5 + np.arange(n_timebins))
+        self.cnt = {'time': self.time[0] + self.setup['setup']['Time step']*(0.5 + np.arange(n_timebins))}
         self.time_led = self.time[0] + self.setup['led']['LED time sampling']*(0.5 + np.arange(n_led))
 
         self.winlen = ha.winlen[tind]
@@ -207,7 +199,7 @@ class DPSD:
 
         logger.info('Starting time loop')
 
-        logger.info('# pulses: %d' %n_pulses)
+        logger.info('# pulses: %d', n_pulses)
 
         maxpos = np.argmax(pulses, axis=1)
         pulse_max = np.max(pulses, axis=1)
@@ -296,11 +288,10 @@ class DPSD:
         cnt_list = ('neut1', 'gamma1', 'led', 'pileup', 'sat', 'phys', 'DD', 'DT')
         nxCh = self.setup['separation']['#bins Pulse Height']
 
-        self.cnt = {}
         self.phs = {}
 
         for spec in cnt_list:
-            cnt, tedges = np.histogram(self.time[self.flg[spec]], bins=n_timebins, range=[self.time_cnt[0]-0.5*self.setup['setup']['Time step'], self.time_cnt[-1]+0.5*self.setup['setup']['Time step']])
+            cnt, tedges = np.histogram(self.time[self.flg[spec]], bins=n_timebins, range=[self.cnt['time'][0]-0.5*self.setup['setup']['Time step'], self.cnt['time'][-1]+0.5*self.setup['setup']['Time step']])
             phs, edges = np.histogram(np.float32(nxCh)/np.float32(self.setup['separation']['Marker'])*self.TotalIntegral[self.flg[spec]], bins=nxCh, range=[-0.5, nxCh + 0.5])
             self.cnt[spec] = cnt.astype(np.float32)
             self.phs[spec] = phs.astype(np.float32)/self.dt
@@ -317,7 +308,7 @@ class DPSD:
         self.cnt['gamma2'] = pup_frac*self.cnt['gamma1']
 
 
-    def sfwrite(self, fsfh='%s/NSP00000.sfh' %dpsd_dir, exp='AUGD', force=False):
+    def sfwrite(self, fsfh=dpsd_dir / 'NSP00000.sfh', exp='AUGD', force=False):
 
         import aug_sfutils as sf
         from aug_sfutils import sfhmod
@@ -327,20 +318,20 @@ class DPSD:
         diag = 'NSP'
         nsp = sf.SFREAD('NSP', self.nshot, exp=exp)
         if nsp.status and not force:
-            logger.error('NSP shotfile for #%d exists already' %self.nshot)
+            logger.info('NSP shotfile for #%d exists already' %self.nshot)
             return
 
-        nt = len(self.time_cnt)
-        ftemp = '%s/NSP00000.sfh.temp' %dpsd_dir
+        nt = len(self.cnt['time'])
+        ftemp = dpsd_dir / 'NSP00000.sfh.temp'
         sfh = sfhmod.SFHMOD(fin=ftemp)
-        for lbl in ['time'] + sig1d:
+        for lbl in sig1d:
             sfh.modtime(lbl, nt)
         sfh.write(fout=fsfh)
 
         os.chdir(dpsd_dir)
 
         if ww.Open(exp, diag, self.nshot):
-            status = ww.SetSignal('time', np.array(self.time_cnt, dtype=np.float32))
             for lbl in sig1d:
-                status = ww.SetSignal(lbl, np.array(self.cnt[lbl], dtype=np.float32))
+                print(lbl)
+                status = ww.SetSignal(lbl, self.cnt[lbl])
             ww.Close()
