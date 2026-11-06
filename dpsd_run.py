@@ -1,4 +1,4 @@
-import sys, os, logging, time
+import sys, os, logging, time, shutil
 
 import numpy as np
 import numba as nb
@@ -138,10 +138,11 @@ class DPSD:
             for nshot in n_shots:
                 logger.info(nshot)
                 self.nshot = int(nshot)
-                shot100 = self.nshot // 100
-                HAfile = nesp_root / str(shot100) / str(nshot) / f'HA_{nshot}.dat'
+                sshot = f'{nshot:05d}'
+                shot100 = sshot[:3]
+                HAfile = nesp_root / shot100 / sshot / f'HA_{sshot}.dat'
                 if not HAfile.is_file():
-                    HAfile = nesp_root / str(shot100) / f'HA_{nshot}.dat'
+                    HAfile = nesp_root / shot100 / f'HA_{sshot}.dat'
                 self.run(HAfile, t_ranges=t_ranges, check_md5=True)
                 if 'Write shotfiles' in io_d.keys():
                     if self.status and io_d['Write shotfiles']:
@@ -308,12 +309,10 @@ class DPSD:
         self.cnt['gamma2'] = pup_frac*self.cnt['gamma1']
 
 
-    def sfwrite(self, fsfh=dpsd_dir / 'NSP00000.sfh', exp='AUGD', force=False):
+    def sfwrite(self, exp='augd', force=False):
 
         import aug_sfutils as sf
         from aug_sfutils import sfhmod
-
-        ww = sf.WW()
 
         diag = 'NSP'
         nsp = sf.SFREAD('NSP', self.nshot, exp=exp)
@@ -321,17 +320,7 @@ class DPSD:
             logger.info('NSP shotfile for #%d exists already' %self.nshot)
             return
 
-        nt = len(self.cnt['time'])
-        ftemp = dpsd_dir / 'NSP00000.sfh.temp'
-        sfh = sfhmod.SFHMOD(fin=ftemp)
-        for lbl in sig1d:
-            sfh.modtime(lbl, nt)
-        sfh.write(fout=fsfh)
-
-        os.chdir(dpsd_dir)
-
-        if ww.Open(exp, diag, self.nshot):
-            for lbl in sig1d:
-                print(lbl)
-                status = ww.SetSignal(lbl, self.cnt[lbl])
-            ww.Close()
+        counts = {key: self.cnt[key] for key in sig1d}
+        counts['neutD-T'] = self.cnt['DT']
+        shutil.copy(dpsd_dir / 'NSP00000.sfh.temp', dpsd_dir / 'NSP00000.sfh')
+        status = sf.write_sf(self.nshot, counts, dpsd_dir, 'NSP', exp=exp)

@@ -3,7 +3,7 @@
 source /etc/profile.d/modules.sh
 
 module purge
-module load aug_sfutils/tok/unstable
+module load miniforge3
 
 rootdir=`dirname $0`        # may be relative path
 $rootdir/dpsd.py

@@ -153,7 +153,7 @@ class DPSD(QMainWindow):
 
 # User options
 
-        f_json = '%s/settings/default2.json' %dpsd_dir
+        f_json = '%s/settings/default.json' %dpsd_dir
         with open(f_json) as fjson:
             self.setup_init = json.load(fjson)
 
